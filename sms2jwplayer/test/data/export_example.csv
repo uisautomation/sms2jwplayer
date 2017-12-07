@@ -1,0 +1,3 @@
+media_id,clip_id,format,filename,created_at,title,description
+8,997042,archive-h264,/archive/8/997042.mp4,2007-09-04 19:11:47+01,foo,foobar
+8,13264,audio,/archive/8/13264.aif,2007-09-04 19:11:47+01,some title,and some description

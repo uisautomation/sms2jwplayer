@@ -4,8 +4,14 @@ Parsing SMS export CSV format.
 """
 import collections
 import csv
+import enum
 
 import dateutil.parser
+
+
+class MediaFormat(enum.Enum):
+    VIDEO = 'archive-h264'
+    AUDIO = 'audio'
 
 
 MediaItem = collections.namedtuple(
@@ -18,9 +24,10 @@ Representation of a single media item within the SMS.
 .. seealso:: :any:`csvexport`
 """
 
+
 # Callables which massage strings into the right types for each column
 _MEDIA_ITEM_TYPES = [
-    int, int, str, str, dateutil.parser.parse, str, str
+    int, int, MediaFormat, str, dateutil.parser.parse, str, str
 ]
 
 
@@ -30,7 +37,9 @@ def load(fobj, skip_header_row=True):
     first line of the CSV file is ignored.
 
     The CSV file must be in the format described in :any:`csvexport`. Any extra
-    columns are ignored.
+    columns are ignored. The ``media_id`` and ``clip_id`` columns are converted
+    to integers and the ``created_at`` column is parsed into a
+    :py:class:`datetime.datetime` instance.
 
     """
     reader = csv.reader(fobj)

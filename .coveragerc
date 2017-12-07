@@ -1,0 +1,3 @@
+[run]
+# Do not include the sms2jwplayer tests in coverage output
+omit = sms2jwplayer/test/*

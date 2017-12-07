@@ -1,9 +1,9 @@
-CSV Export Format
-=================
+CSV Export
+==========
 
-The :download:`dump_sms_csv_files.sh <../scripts/dump_sms_csv_files.sh>` script
-can be run on the SMS hosting box to dump an export of the current state of the
-SMS to a CSV file which can be ingested by this tool. The CSV consists of a
+The :download:`export_sms_feed.sh <../scripts/export_sms_feed.sh>` script
+will SSH into a SMS hosting box to dump an export of the current state of the
+SMS to a CSV file which is then ingested by this tool. The CSV consists of a
 single header line and then rows of data. The CSV columns are as follows:
 
 media_id
@@ -27,3 +27,10 @@ title
 description
     A string giving the description of the media item
 
+Example
+-------
+
+Here is an example file formatted correctly as used in the test suite:
+
+.. literalinclude:: ../sms2jwplayer/test/data/export_example.csv
+    :language: csv

@@ -7,7 +7,8 @@ to the `jwplayer platform <https://developer.jwplayer.com/jw-platform/>`_.
 
 .. toctree::
     :caption: Contents
+    :maxdepth: 1
 
+    intro
     csvexport
-    genmrss
     reference

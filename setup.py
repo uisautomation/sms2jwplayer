@@ -4,6 +4,7 @@ setup(
     name='sms2jwplayer',
     author='University of Cambridge Information Services',
     packages=find_packages(),
+    include_package_data=True,
     entry_points={
         'console_scripts': [
             'sms2jwplayer=sms2jwplayer:main',
@@ -14,5 +15,13 @@ setup(
         'docopt',
         'jwplatform',
         'python-dateutil',
+    ],
+    setup_requires=[
+        'pytest-runner',
+    ],
+    tests_require=[
+        'pytest',
+        'pytest-cov',
+        'feedparser',
     ],
 )
