@@ -3,7 +3,7 @@
 This repository contains tooling to implement the University of Cambridge
 streaming media service (SMS) to jwplayer migration.
 
-See the documentation at https://uis-sms2jwplayer.rtfd.io/.
+See the documentation at https://uis-sms2jwplayer.readthedocs.io/.
 
 ## Running tests
 
