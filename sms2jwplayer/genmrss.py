@@ -25,11 +25,11 @@ MRSS_TEMPLATE_STR = '''
         <description>SMS Export Feed</description>
 {% for item in items %}
         <item>
-            <title>{{item.title}}</title>
+            <title>{{item.title|sanitise}}</title>
             <link>{{item|url}}</link>
-            <description>{{item.description}}</description>
-            <media:title>{{item.title}}</media:title>
-            <media:description>{{item.description}}</media:description>
+            <description>{{item.description|sanitise}}</description>
+            <media:title>{{item.title|sanitise}}</media:title>
+            <media:description>{{item.description|sanitise}}</media:description>
             <guid isPermaLink="false">{{item|url}}</guid>
             <media:content url="{{item|url}}" />
         </item>
@@ -37,6 +37,20 @@ MRSS_TEMPLATE_STR = '''
     </channel>
 </rss>
 '''.strip()
+
+
+def sanitise(s, max_length=4096):
+    """
+    Strip odd characters from a string and sanitise the length to maximise
+    chances that the feed parse succeeds.
+
+    """
+    # Map control characters to empty string
+    s = s.translate(dict.fromkeys(range(32)))
+
+    # Truncate
+    s = s[:max_length]
+    return s
 
 
 def main(opts):
@@ -59,7 +73,7 @@ def main(opts):
         enabled_extensions=['html', 'xml'],
         default_for_string=True
     ))
-    env.filters.update({'url': url})
+    env.filters.update({'url': url, 'sanitise': sanitise})
 
     feed_content = env.from_string(MRSS_TEMPLATE_STR).render(
         items=items
