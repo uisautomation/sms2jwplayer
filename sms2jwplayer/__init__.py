@@ -3,8 +3,9 @@ Tool to support bulk import of University of Cambridge SMS into JWPlayer.
 
 Usage:
     sms2jwplayer (-h | --help)
-    sms2jwplayer genmrss [options] --base=URL [--strip-leading=N]
+    sms2jwplayer genmrss [--verbose] --base=URL [--strip-leading=N]
         <csv> [<outfile>]
+    sms2jwplayer fetch [--verbose] [--base-name=NAME]
 
 Options:
     -h, --help          Show a brief usage summary.
@@ -17,9 +18,13 @@ Options:
     --strip-leading=N   Number of leading components of filename path to strip
                         from filenames in the CSV. [default: 1]
 
+    --base-name=NAME    Base of filename used to save results to.
+                        [default: videos_]
+
 Sub commands:
 
     genmrss             Generate an MRSS feed for the export.
+    fetch               Fetch details on all videos in jwplayer.
 
 """
 import logging
@@ -33,3 +38,6 @@ def main():
     if opts['genmrss']:
         from . import genmrss
         genmrss.main(opts)
+    elif opts['fetch']:
+        from . import fetch
+        fetch.main(opts)
