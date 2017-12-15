@@ -89,10 +89,13 @@ def process_videos(fobj, items, videos):
         # video and item now match
         n_matched += 1
 
-        # form list of expected custom properties
+        # form list of expected custom properties. We cuddle the id numbers in <type>:...: so that
+        # we can search for "exactly" the media id or clip id rather than simply a video whose id
+        # contains another. (E.g. searching for clip "10" is likely to being up "210", "310",
+        # "1045", etc.)
         custom_props = {
-            'sms_media_id': item.media_id,
-            'sms_clip_id': item.clip_id,
+            'sms_media_id': 'media:{}:'.format(item.media_id),
+            'sms_clip_id': 'clip:{}:'.format(item.clip_id),
         }
 
         # remove those which match
