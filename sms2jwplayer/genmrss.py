@@ -7,11 +7,11 @@ import into jwplayer
 """
 import logging
 import urllib.parse
-import sys
 
 from jinja2 import Environment, select_autoescape
 
 from . import csv as smscsv
+from .util import output_stream
 
 
 LOG = logging.getLogger('genmrss')
@@ -78,8 +78,5 @@ def main(opts):
     feed_content = env.from_string(MRSS_TEMPLATE_STR).render(
         items=items
     )
-    if opts['<outfile>'] is None:
-        sys.stdout.write(feed_content)
-    else:
-        with open(opts['<outfile>'], 'w') as f:
-            f.write(feed_content)
+    with output_stream(opts) as f:
+        f.write(feed_content)

@@ -32,8 +32,9 @@ class BasicCallTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             csv_out = os.path.join(td, 'out.csv')
             genmrss(
-                '--base=http://example.com/', data_path('export_example.csv'),
-                csv_out
+                '--base=http://example.com/',
+                '--output=' + csv_out,
+                data_path('export_example.csv'),
             )
 
             # Check some output was written

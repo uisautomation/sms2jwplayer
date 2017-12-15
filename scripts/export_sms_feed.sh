@@ -2,7 +2,7 @@
 # Output SMS feed URL directly from SMS database.
 #
 # Usage:
-#	export_sms_feed.sh <sms-host> <base-url> <feed>
+#	export_sms_feed.sh <sms-host> <base-url> <feed> [<csv>]
 #
 # Options:
 #
@@ -10,6 +10,7 @@
 #	<base-url>    Base URL of SMS archive endpoint.
 #	              (E.g. http://user:pass@download.example.com:1234/archive)
 #	<file>        File to write feed to or "-" for stdout
+#	<csv>         If specified, write CSV to this file.
 #
 # Environment variables:
 #
@@ -19,9 +20,10 @@ set -e
 HOST=$1
 BASE=$2
 FEED=$3
+CSV=$4
 
 if [ -z "${FEED}" ]; then
-	echo "usage: export_sms_feed <sms-host> <base-url> <feed>" >&2
+	echo "usage: export_sms_feed <sms-host> <base-url> <feed> [<csv>]" >&2
 	exit 1
 fi
 
@@ -61,7 +63,7 @@ COPY (
 EOL
 
 msg "-- Generating feed"
-sms2jwplayer -v genmrss "--base=${BASE}" sms_export.csv feed.rss
+sms2jwplayer -v genmrss --base="${BASE}" --output=feed.rss sms_export.csv
 
 popd >/dev/null
 msg "-- Writing feed to '${FEED}'"
@@ -69,6 +71,11 @@ if [ "${FEED}" == "-" ]; then
 	cat "${tmpdir}/feed.rss"
 else
 	mv "${tmpdir}/feed.rss" "${FEED}"
+fi
+
+if [ ! -z "$CSV" ]; then
+	echo "-- Writing export CSV to ${CSV}"
+	mv "${tmpdir}/sms_export.csv" "$CSV"
 fi
 
 msg "-- Deleting workspace ${tmpdir}"

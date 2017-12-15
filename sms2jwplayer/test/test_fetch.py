@@ -1,34 +1,15 @@
 import logging
-import os
-import pprint
-import tempfile
-import unittest
 import unittest.mock as mock
 
 from sms2jwplayer import main
-from sms2jwplayer.test.io import data_path, captured_stdout
 
+from .util import JWPlatformTestCase
 
 LOG = logging.getLogger(__name__)
 
 
 class ExitException(Exception):
     pass
-
-
-class JWPlatformTestCase(unittest.TestCase):
-    """
-    A test case which patches the jwplatform.Client object.
-
-    """
-    def setUp(self):
-        self.jwclient_patcher = mock.patch('jwplatform.Client')
-        self.client_callable = self.jwclient_patcher.start()
-        self.client = mock.MagicMock()
-        self.client_callable.return_value = self.client
-
-    def tearDown(self):
-        self.jwclient_patcher.stop()
 
 
 class CredentialTests(JWPlatformTestCase):

@@ -1,31 +1,23 @@
 """
+The fetch subcommand fetches metadata on jwplayer videos and stores it locally in JSON documents.
 
 """
 import json
 import logging
-import os
 import sys
 
-import jwplatform
+from .util import get_jwplatform_client, JWPlatformClientError
 
 
 LOG = logging.getLogger('fetch')
 
 
 def main(opts):
-    api_key = os.environ.get('JWPLAYER_API_KEY')
-    if api_key is None:
-        LOG.error('Set jwplayer API key in JWPLAYER_API_KEY environment '
-                  'variable')
+    try:
+        client = get_jwplatform_client()
+    except JWPlatformClientError as e:
+        LOG.error('jwplatform error: %s', e)
         sys.exit(1)
-
-    api_secret = os.environ.get('JWPLAYER_API_SECRET')
-    if api_secret is None:
-        LOG.error('Set jwplayer API secret in JWPLAYER_API_SECRET environment '
-                  'variable')
-        sys.exit(1)
-
-    client = jwplatform.Client(api_key, api_secret)
 
     current_offset = 0
     while True:
