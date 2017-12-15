@@ -6,7 +6,7 @@ Status](https://travis-ci.org/uisautomation/sms2jwplayer.svg?branch=master)](htt
 This repository contains tooling to implement the University of Cambridge
 streaming media service (SMS) to jwplayer migration.
 
-See the documentation at https://uis-sms2jwplayer.readthedocs.io/.
+See the documentation at https://uisautomation.github.io/sms2jwplayer/.
 
 ## Running tests
 
