@@ -74,8 +74,8 @@ def main(opts):
                 client.videos.update(**params)
 
                 # On a successful call, slightly shorten the delay
-                delay *= 0.95
+                delay = max(1e-2, min(2., delay * 0.8))
                 time.sleep(delay)
                 break
             except JWPlatformRateLimitExceededError:
-                delay *= 2.
+                delay = max(1e-2, min(2., 2. * delay))
