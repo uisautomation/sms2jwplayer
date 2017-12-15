@@ -15,6 +15,7 @@ setup(
         'docopt',
         'jwplatform',
         'python-dateutil',
+        'tqdm',
     ],
     setup_requires=[
         'pytest-runner',
