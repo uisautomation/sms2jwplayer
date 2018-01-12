@@ -15,6 +15,7 @@ setup(
         'docopt',
         'jwplatform',
         'python-dateutil',
+        'requests',
         'tqdm',
     ],
     setup_requires=[

@@ -39,3 +39,9 @@ Applying metadata updates
 
 .. automodule:: sms2jwplayer.applyupdatejob
     :members:
+
+Extracting video view stats
+---------------------------
+
+.. automodule:: sms2jwplayer.analytics
+    :members:

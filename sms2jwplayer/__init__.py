@@ -9,6 +9,7 @@ Usage:
     sms2jwplayer genupdatejob [--verbose] [--strip-leading=N]
         [--output=FILE] <csv> <metadata>...
     sms2jwplayer applyupdatejob [--verbose] [<update>]
+    sms2jwplayer analytics [--output=FILE] [--verbose] <date>
 
 Options:
     -h, --help          Show a brief usage summary.
@@ -19,6 +20,8 @@ Options:
                         endpoint.
     <update>            JSON file specifying update jobs as returned from genupdatejob. If omitted,
                         use stdin.
+
+    <date>              Date in YYYY-MM-DD format.
 
     --output=FILE       Output file. If omitted, use stdout.
 
@@ -34,6 +37,7 @@ Sub commands:
     genmrss             Generate an MRSS feed for the export.
     fetch               Fetch details on all videos in jwplayer.
     genupdatejob        Generate list of missing metadata for each video key.
+    analytics           Generate SMS analytics for a given day.
 
 """
 import logging
@@ -56,3 +60,6 @@ def main():
     elif opts['applyupdatejob']:
         from . import applyupdatejob
         applyupdatejob.main(opts)
+    elif opts['analytics']:
+        from . import analytics
+        analytics.main(opts)
