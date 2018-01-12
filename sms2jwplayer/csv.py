@@ -17,7 +17,9 @@ class MediaFormat(enum.Enum):
 MediaItem = collections.namedtuple(
     'MediaItem',
     ('media_id clip_id format filename created_at title description collection_id instid '
-     'aspect_ratio creator in_dspace')
+     'aspect_ratio creator in_dspace publisher copyright language keywords visibility '
+     'acl screencast image_id dspace_path featured branding last_updated_at updated_by '
+     'downloadable withdrawn abstract priority')
 )
 MediaItem.__doc__ = """
 Representation of a single media item within the SMS.
@@ -29,7 +31,9 @@ Representation of a single media item within the SMS.
 # Callables which massage strings into the right types for each column
 _MEDIA_ITEM_TYPES = [
     int, int, MediaFormat, str, dateutil.parser.parse, str, str, int, str, str, str,
-    lambda b: b == 't'
+    lambda b: b == 't', str, str, str, str, str, lambda acl: acl.split(','), lambda b: b == 't',
+    lambda i: int(i) if i != '' else None, str, lambda b: b == 't', lambda b: b == 't',
+    dateutil.parser.parse, str, lambda b: b == 't', str, str, int
 ]
 
 

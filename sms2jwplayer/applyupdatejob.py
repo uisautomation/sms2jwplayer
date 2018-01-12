@@ -71,7 +71,8 @@ def main(opts):
 
         created_at = update.get('custom', {}).get('sms_created_at')
         if created_at is not None:
-            params['date'] = int(dateutil.parser.parse(created_at.split(':')[1]).timestamp())
+            date_str = ':'.join(created_at.split(':')[1:-1])
+            params['date'] = int(dateutil.parser.parse(date_str).timestamp())
 
         for custom_key, custom_value in update.get('custom', {}).items():
             params['custom.' + custom_key] = str(custom_value)

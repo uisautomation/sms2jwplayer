@@ -43,28 +43,45 @@ msg "-- Generating SMS export CSV"
 "${SMS_SSH}" "$HOST" psql sms sms >sms_export.csv <<EOL
 COPY (
 	SELECT
-		sms_media.id AS media_id,
+		m.id AS media_id,
 		sms_clip.id AS clip_id,
 		sms_clip.format AS format,
 		sms_clip.filename AS filename,
-		sms_media.created AS created_at,
-		sms_media.title AS title,
-		sms_media.description AS description,
-		sms_media.collection_id AS collection_id,
+		m.created AS created_at,
+		m.title AS title,
+		m.description AS description,
+		m.collection_id AS collection_id,
 		sms_collection.instid AS instid,
-                sms_media.aspect_ratio AS aspect_ratio,
-                sms_media.creator AS creator,
-                sms_media.dspace AS in_dspace
+		m.aspect_ratio AS aspect_ratio,
+		m.creator AS creator,
+		m.dspace AS in_dspace,
+		m.publisher AS publisher,
+		m.copyright AS copyright,
+		m.language AS language,
+		m.keywords AS keywords,
+		m.visibility AS visibility,
+		m.acl AS acl,
+		m.screencast AS screencast,
+		m.image_id AS image_id,
+		m.dspace_path AS dspace_path,
+		m.featured AS featured,
+		m.branding AS branding,
+		m.last_updated AS last_updated_at,
+		m.updated_by AS updated_by,
+		m.downloadable AS downloadable,
+		m.withdrawn AS withdrawn,
+		m.abstract AS abstract,
+		m.priority AS priority
 	FROM
-		sms_media
-		JOIN sms_clip ON sms_media.id = sms_clip.media_id
-		JOIN sms_collection ON sms_collection.id = sms_media.collection_id
+		sms_media m
+		JOIN sms_clip ON m.id = sms_clip.media_id
+		JOIN sms_collection ON sms_collection.id = m.collection_id
 	WHERE
 		( sms_clip.format = 'archive-h264' OR sms_clip.format = 'audio' )
 		AND sms_clip.quality = 'high'
 		AND sms_clip.filename IS NOT NULL
 	ORDER BY
-		sms_media.id
+		m.id
 ) TO STDOUT DELIMITER ',' CSV HEADER;
 EOL
 
