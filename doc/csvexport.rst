@@ -26,6 +26,10 @@ title
     A string giving the title of the media item
 description
     A string giving the description of the media item
+collection_id
+    Numeric ID for the SMS collection
+instid
+    String ID for institution which owns the collection
 
 Example
 -------

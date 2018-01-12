@@ -49,10 +49,13 @@ COPY (
 		sms_clip.filename AS filename,
 		sms_media.created AS created_at,
 		sms_media.title AS title,
-		sms_media.description AS description
+		sms_media.description AS description,
+		sms_media.collection_id AS collection_id,
+		sms_collection.instid AS instid
 	FROM
 		sms_media
 		JOIN sms_clip ON sms_media.id = sms_clip.media_id
+		JOIN sms_collection ON sms_collection.id = sms_media.collection_id
 	WHERE
 		( sms_clip.format = 'archive-h264' OR sms_clip.format = 'audio' )
 		AND sms_clip.quality = 'high'
