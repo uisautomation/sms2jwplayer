@@ -25,6 +25,7 @@ import logging
 import sys
 import time
 
+import dateutil.parser
 import tqdm
 from jwplatform.errors import JWPlatformRateLimitExceededError
 
@@ -64,7 +65,13 @@ def main(opts):
         except KeyError:
             LOG.warning('Update lacks key: %s', repr(update))
 
-        params = {'video_key': key}
+        params = {
+            'video_key': key
+        }
+
+        created_at = update.get('custom', {}).get('sms_created_at')
+        if created_at is not None:
+            params['date'] = int(dateutil.parser.parse(created_at.split(':')[1]).timestamp())
 
         for custom_key, custom_value in update.get('custom', {}).items():
             params['custom.' + custom_key] = str(custom_value)

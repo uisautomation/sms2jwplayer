@@ -51,7 +51,10 @@ COPY (
 		sms_media.title AS title,
 		sms_media.description AS description,
 		sms_media.collection_id AS collection_id,
-		sms_collection.instid AS instid
+		sms_collection.instid AS instid,
+                sms_media.aspect_ratio AS aspect_ratio,
+                sms_media.creator AS creator,
+                sms_media.dspace AS in_dspace
 	FROM
 		sms_media
 		JOIN sms_clip ON sms_media.id = sms_clip.media_id

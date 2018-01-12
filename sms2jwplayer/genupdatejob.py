@@ -98,6 +98,10 @@ def process_videos(fobj, items, videos):
             'sms_clip_id': 'clip:{}:'.format(item.clip_id),
             'sms_collection_id': 'collection:{}:'.format(item.collection_id),
             'sms_instid': 'instid:{}:'.format(item.instid),
+            'sms_in_dspace': 'in_dspace:{}:'.format('T' if item.in_dspace else 'F'),
+            'sms_created_by': 'creator:{}:'.format(item.creator),
+            'sms_created_at': 'created_at:{}:'.format(item.created_at.isoformat()),
+            'sms_aspect_ratio': 'aspect:{}:'.format(item.aspect_ratio),
         }
 
         # remove those which match

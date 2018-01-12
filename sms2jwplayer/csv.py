@@ -16,7 +16,8 @@ class MediaFormat(enum.Enum):
 
 MediaItem = collections.namedtuple(
     'MediaItem',
-    'media_id clip_id format filename created_at title description collection_id instid'
+    ('media_id clip_id format filename created_at title description collection_id instid '
+     'aspect_ratio creator in_dspace')
 )
 MediaItem.__doc__ = """
 Representation of a single media item within the SMS.
@@ -27,7 +28,8 @@ Representation of a single media item within the SMS.
 
 # Callables which massage strings into the right types for each column
 _MEDIA_ITEM_TYPES = [
-    int, int, MediaFormat, str, dateutil.parser.parse, str, str, int, str
+    int, int, MediaFormat, str, dateutil.parser.parse, str, str, int, str, str, str,
+    lambda b: b == 't'
 ]
 
 
@@ -49,6 +51,6 @@ def load(fobj, skip_header_row=True):
         next(reader)
 
     return [
-        MediaItem._make([t(v) for t, v in zip(_MEDIA_ITEM_TYPES, row[:9])])
+        MediaItem._make([t(v) for t, v in zip(_MEDIA_ITEM_TYPES, row)])
         for row in reader
     ]
