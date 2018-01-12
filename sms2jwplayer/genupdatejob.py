@@ -96,6 +96,8 @@ def process_videos(fobj, items, videos):
         custom_props = {
             'sms_media_id': 'media:{}:'.format(item.media_id),
             'sms_clip_id': 'clip:{}:'.format(item.clip_id),
+            'sms_collection_id': 'collection:{}:'.format(item.collection_id),
+            'sms_instid': 'instid:{}:'.format(item.instid),
         }
 
         # remove those which match
