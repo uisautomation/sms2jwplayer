@@ -117,7 +117,6 @@ def process_videos(fobj, items, videos):
             'sms_updated_by': 'updated_by:{}:'.format(item.updated_by),
             'sms_downloadable': 'downloadable:{}:'.format(item.downloadable),
             'sms_withdrawn': 'withdrawn:{}:'.format(item.withdrawn),
-            'sms_abstract': 'abstract:{}:'.format(item.abstract),
             'sms_priority': 'priority:{}:'.format(item.priority),
         }
 
