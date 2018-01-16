@@ -119,7 +119,7 @@ def main(opts):
     else:
         rows_iterable = rows
 
-    if opts['--output'] != '' and opts['--output'] != '-':
+    if opts['--output'] is not None and opts['--output'] != '-':
         with open(opts['--output'], 'w') as fobj:
             write_output(fobj, client, rows_iterable)
     else:
