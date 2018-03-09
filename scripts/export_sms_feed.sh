@@ -14,7 +14,9 @@
 #
 # Environment variables:
 #
-#	SMS_SSH       SSH client to use instead of "ssh".
+#	SMS_SSH               SSH client to use instead of "ssh".
+#	EXTRA_GENMRSS_OPTS    Extra options appended to sms2jwplayer genmrss
+#	                      command
 set -e
 
 HOST=$1
@@ -86,7 +88,8 @@ COPY (
 EOL
 
 msg "-- Generating feed"
-sms2jwplayer -v genmrss --base="${BASE}" --output=feed.rss sms_export.csv
+sms2jwplayer -v genmrss --base="${BASE}" --output=feed.rss \
+	${EXTRA_GENMRSS_OPTS} sms_export.csv
 
 popd >/dev/null
 msg "-- Writing feed to '${FEED}'"

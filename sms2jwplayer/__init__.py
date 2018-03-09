@@ -4,7 +4,7 @@ Tool to support bulk import of University of Cambridge SMS into JWPlayer.
 Usage:
     sms2jwplayer (-h | --help)
     sms2jwplayer genmrss [--verbose] --base=URL [--strip-leading=N]
-        [--output=FILE] <csv>
+        [--output=FILE] [--limit=NUMBER] [--offset=NUMBER] <csv>
     sms2jwplayer fetch [--verbose] [--base-name=NAME]
     sms2jwplayer genupdatejob [--verbose] [--strip-leading=N]
         [--output=FILE] <csv> <metadata>...
@@ -31,6 +31,10 @@ Options:
 
     --base-name=NAME    Base of filename used to save results to.
                         [default: videos_]
+
+    --limit=NUMBER      Limit feed to last NUMBER most updated videos. [default: 1000]
+    --offset=NUMBER     Start feed at NUMBER-th most recently updated. This index is 0-based
+                        [default: 0]
 
 Sub commands:
 
