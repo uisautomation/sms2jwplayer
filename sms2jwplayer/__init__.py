@@ -3,7 +3,7 @@ Tool to support bulk import of University of Cambridge SMS into JWPlayer.
 
 Usage:
     sms2jwplayer (-h | --help)
-    sms2jwplayer genmrss [--verbose] --base=URL [--strip-leading=N]
+    sms2jwplayer genmrss [--verbose] --base=URL --base-image-url=URL [--strip-leading=N]
         [--output=FILE] [--limit=NUMBER] [--offset=NUMBER] <csv>
     sms2jwplayer fetch [--verbose] [--base-name=NAME]
     sms2jwplayer genupdatejob [--verbose] [--strip-leading=N]
@@ -26,6 +26,7 @@ Options:
     --output=FILE       Output file. If omitted, use stdout.
 
     --base=URL          Base URL to use for links in MRSS feed.
+    --base-image-url=URL          Base URL to use for thumbnail images in MRSS feed.
     --strip-leading=N   Number of leading components of filename path to strip
                         from filenames in the CSV. [default: 1]
 
@@ -45,7 +46,6 @@ Sub commands:
 
 """
 import logging
-
 import docopt
 
 

@@ -7,14 +7,13 @@ import into jwplayer
 """
 import logging
 import urllib.parse
-
 from jinja2 import Environment, select_autoescape
-
 from . import csv as smscsv
 from .util import output_stream
 
 
 LOG = logging.getLogger('genmrss')
+
 
 #: Jinja2 template for MRSS feed output by ``genmrss``.
 MRSS_TEMPLATE_STR = '''
@@ -30,6 +29,7 @@ MRSS_TEMPLATE_STR = '''
             <description>{{item.description|sanitise}}</description>
             <media:title>{{item.title|sanitise}}</media:title>
             <media:description>{{item.description|sanitise}}</media:description>
+            {% if item.image_id %}<media:thumbnail url="{{item|image_url}}" />{% endif %}
             <guid isPermaLink="false">{{item|url}}</guid>
             <media:content url="{{item|url}}" />
         </item>
@@ -82,11 +82,15 @@ def main(opts):
         path_items = path_items[int(opts['--strip-leading']):]
         return urllib.parse.urljoin(opts['--base'] + '/', '/'.join(path_items))
 
+    def image_url(item):
+        """Return the URL for an image_id."""
+        return urllib.parse.urljoin(opts['--base-image-url'], str(item.image_id))
+
     env = Environment(autoescape=select_autoescape(
         enabled_extensions=['html', 'xml'],
         default_for_string=True
     ))
-    env.filters.update({'url': url, 'sanitise': sanitise})
+    env.filters.update({'url': url, 'sanitise': sanitise, 'image_url': image_url})
 
     feed_content = env.from_string(MRSS_TEMPLATE_STR).render(
         items=items

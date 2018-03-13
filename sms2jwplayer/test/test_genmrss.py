@@ -21,7 +21,8 @@ class BasicCallTest(unittest.TestCase):
     """
     def test_basic_call(self):
         """Calling genmrss with example csv does not throw."""
-        genmrss('--base=http://example.com/', data_path('export_example.csv'))
+        genmrss('--base=http://example.com/', '--base-image-url=http://example.com/images/',
+                data_path('export_example.csv'))
 
     def test_file_output(self):
         """
@@ -32,7 +33,7 @@ class BasicCallTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             csv_out = os.path.join(td, 'out.csv')
             genmrss(
-                '--base=http://example.com/',
+                '--base=http://example.com/', '--base-image-url=http://example.com/images/',
                 '--output=' + csv_out,
                 data_path('export_example.csv'),
             )
@@ -49,7 +50,8 @@ class BasicCallTest(unittest.TestCase):
         """
         with captured_stdout() as stdout:
             genmrss(
-                '--base=http://example.com/', data_path('export_example.csv')
+                '--base=http://example.com/', '--base-image-url=http://example.com/images/',
+                data_path('export_example.csv')
             )
 
         # Check some output was written
@@ -63,7 +65,8 @@ class MRSSFormatTests(unittest.TestCase):
     def setUp(self):
         with captured_stdout() as stdout:
             genmrss(
-                '--base=' + self.BASE_URL, data_path('export_example.csv')
+                '--base=' + self.BASE_URL, '--base-image-url=http://example.com/images/',
+                data_path('export_example.csv')
             )
 
         # Store raw and parsed output

@@ -9,6 +9,8 @@
 #	<sms-host>    Hostname of SMS box to log into. (E.g. root@example.com)
 #	<base-url>    Base URL of SMS archive endpoint.
 #	              (E.g. http://user:pass@download.example.com:1234/archive)
+#	<base-image-url>    Base URL of SMS thumbnail images.
+#	              (E.g. https://sms.cam.ac.uk/image/)
 #	<file>        File to write feed to or "-" for stdout
 #	<csv>         If specified, write CSV to this file.
 #
@@ -21,11 +23,12 @@ set -e
 
 HOST=$1
 BASE=$2
-FEED=$3
-CSV=$4
+BASE_IMAGE_URL=$3
+FEED=$4
+CSV=$5
 
 if [ -z "${FEED}" ]; then
-	echo "usage: export_sms_feed <sms-host> <base-url> <feed> [<csv>]" >&2
+	echo "usage: export_sms_feed <sms-host> <base-url> <base-image-url> <feed> [<csv>]" >&2
 	exit 1
 fi
 
@@ -64,7 +67,7 @@ COPY (
 		m.visibility AS visibility,
 		m.acl AS acl,
 		m.screencast AS screencast,
-		m.image_id AS image_id,
+		coalesce(m.image_id, sms_collection.image_id) AS image_id,
 		m.dspace_path AS dspace_path,
 		m.featured AS featured,
 		m.branding AS branding,
@@ -88,7 +91,7 @@ COPY (
 EOL
 
 msg "-- Generating feed"
-sms2jwplayer -v genmrss --base="${BASE}" --output=feed.rss \
+sms2jwplayer -v genmrss --base="${BASE}" --base-image-url="${BASE_IMAGE_URL}" --output=feed.rss \
 	${EXTRA_GENMRSS_OPTS} sms_export.csv
 
 popd >/dev/null
