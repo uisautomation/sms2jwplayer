@@ -104,9 +104,11 @@ seperated list of any of the following values:
 
     - ``WORLD``         - world visible
     - ``CAM``           - cambridge visible
-    - ``INST:instid``   - visible to an institution
-    - ``GROUP:groupid`` - visible to a group
-    - ``USER:crsid``    - visible to an individual
+    - ``INST_instid``   - visible to an institution
+    - ``GROUP_groupid`` - visible to a group (groupid can by either numeric id or name)
+    - ``USER_crsid``    - visible to an individual
+    
+At the risk of stating the obvious, the list is OR'd to produce the access list.
 """
 MediaItem.screencast.__doc__ = """
 Whether or not the media item is a screencast.
@@ -174,3 +176,5 @@ def load(fobj, skip_header_row=True):
         MediaItem._make([t(v) for t, v in zip(_MEDIA_ITEM_TYPES, row)])
         for row in reader
     ]
+
+
