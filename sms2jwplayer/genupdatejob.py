@@ -52,6 +52,41 @@ def main(opts):
         process_videos(fobj, items, videos)
 
 
+def convert_acl(visibility, acl):
+    """
+    Converts the old visibility and acl fields of :py:`~csv.MediaItem` to the new ACL scheme as
+    defined here: :py:`~csv.MediaItem.acl`.
+
+    :param visibility: :py:`~csv.MediaItem.visibility`
+    :param acl: :py:`~csv.MediaItem.acl` (list)
+    :return: the converted ACL
+    """
+    new_acl = []
+
+    def has_acl():
+        """Captures the case where the ACL [''] means no ACL """
+        return len(acl) != 1 or acl[0] if acl else False
+
+    if visibility == 'world-overrule' or (visibility == 'world' and not has_acl()):
+        new_acl.append('WORLD')
+    elif visibility == 'cam-overrule' or (visibility == 'cam' and not has_acl()):
+        new_acl.append('CAM')
+
+    if has_acl():
+        for ace in acl:
+            if ace.isdigit():
+                new_acl.append(f'GROUP_{ace}')
+            elif ace.upper() == ace:
+                # Testing if a string is uppercase to decide if it represents an institution.
+                # TODO Is this safe? Works for all data as at 2018/03/20.
+                # Otherwise we need to use lookup.
+                new_acl.append(f'INST_{ace}')
+            else:
+                new_acl.append(f'USER_{ace}')
+
+    return ",".join(new_acl)
+
+
 def process_videos(fobj, items, videos):
     """
     Process video metadata records with reference to a dictionary of media items keyed by the
@@ -110,8 +145,8 @@ def process_videos(fobj, items, videos):
             'sms_copyright': f'copyright:{item.copyright}:',
             'sms_language': f'language:{item.language}:',
             'sms_keywords': f'keywords:{item.keywords}:',
-            'sms_visibility': f'visibility:{item.visibility}:',
-            'sms_acl': f'acl:{item.acl}:',
+            # visibility - migration merged with sms_acl
+            'sms_acl': f'acl:{convert_acl(item.visibility, item.acl)}:',
             'sms_screencast': f'screencast:{item.screencast}:',
             'sms_image_id': f'image_id:{item.image_id}:',
             # dspace_path - migration not required
