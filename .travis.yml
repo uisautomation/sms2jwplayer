@@ -3,7 +3,6 @@ sudo: false
 language: python
 python:
     - "3.4" # the python version on the transcode machine
-    - "3.6"
 install:
     - pip install tox
 script:
