@@ -23,38 +23,38 @@ MediaItem = collections.namedtuple(
                   'downloadable withdrawn abstract priority')
 )
 MediaItem.__doc__ = """
-Representation of a single media item within the SMS. 
-The attributes below are all the columns in the :any:`csvexport`. Unless otherwise stated, the 
-attribute is migrated to a custom property in jwplayer and the name of that property will be the 
+Representation of a single media item within the SMS.
+The attributes below are all the columns in the :any:`csvexport`. Unless otherwise stated, the
+attribute is migrated to a custom property in jwplayer and the name of that property will be the
 same but prefixed by "`sms_`".
 
-* ``media_id`` - Numeric ID for the SMS media item. An SMS media item may have multiple clips 
-  associated with it which are encoded into various formats. The media item is the fundamental 
+* ``media_id`` - Numeric ID for the SMS media item. An SMS media item may have multiple clips
+  associated with it which are encoded into various formats. The media item is the fundamental
   object.
 
-* ``clip_id`` - Numeric ID for the SMS clip item. There may be multiple clips associated with a 
+* ``clip_id`` - Numeric ID for the SMS clip item. There may be multiple clips associated with a
   single media item but they must have a unique format.
 
-* ``media_id`` - Numeric ID for the SMS media item. An SMS media item may have multiple clips 
-  associated with it which are encoded into various formats. The media item is the fundamental 
+* ``media_id`` - Numeric ID for the SMS media item. An SMS media item may have multiple clips
+  associated with it which are encoded into various formats. The media item is the fundamental
   object.
 
-* ``clip_id`` - Numeric ID for the SMS clip item. There may be multiple clips associated with a 
+* ``clip_id`` - Numeric ID for the SMS clip item. There may be multiple clips associated with a
   single media item but they must have a unique format.
 
-* ``format`` - One of ``audio`` or ``archive-h264`` depending on whether the clip is audio-only or 
+* ``format`` - One of ``audio`` or ``archive-h264`` depending on whether the clip is audio-only or
   video and audio. This isn't migrated as it is irrelevant in the context of jwplayer.
 
-* ``filename`` - The filename on the SMS hosting machine where the video/audio file is located. 
+* ``filename`` - The filename on the SMS hosting machine where the video/audio file is located.
   This isn't migrated as it is irrelevant in the context of jwplayer.
 
-* ``created_at`` - An ISO 8601 formatted date and time indicating when the media item was first 
+* ``created_at`` - An ISO 8601 formatted date and time indicating when the media item was first
   created.
 
-* ``title`` - A string giving the title of the media item. This is migrated directly to the title 
+* ``title`` - A string giving the title of the media item. This is migrated directly to the title
   of the media item in jwplayer and not as a custom property.
 
-* ``description`` - A string giving the description of the media item. This is migrated directly to 
+* ``description`` - A string giving the description of the media item. This is migrated directly to
   the description of the media item in jwplayer and not as a custom property.
 
 * ``collection_id`` - Numeric ID for the SMS collection.
@@ -65,7 +65,7 @@ same but prefixed by "`sms_`".
 
 * ``creator`` - The media item's creator. The migrated custom property name in sms_created_at.
 
-* ``in_dspace`` - Whether or not the media iten was archived in DSpace. This isn't migrated as it 
+* ``in_dspace`` - Whether or not the media iten was archived in DSpace. This isn't migrated as it
   is irrelevant in the context of jwplayer.
 
 * ``publisher`` - The publisher of the media item.
@@ -84,10 +84,10 @@ same but prefixed by "`sms_`".
     * ``cam-overrule``   - cambridge visible (any ACL is ignored)
     * ``acl-overrule``   - visibility is defined by the ACL
 
-* ``acl`` - A comma seperated list of any of: INSTIDs, CRSIDs, or lookup groups (an integer). 
-  Defines who can see the media item unless ``visibility`` is world-overrule or cam-overrule. 
-  ``acl`` and ``visibility`` are combined when migrating to ``sms_acl`` in a new scheme as a comma 
-  seperated list. At the risk of stating the obvious, the list is OR'd to produce the access list. 
+* ``acl`` - A comma seperated list of any of: INSTIDs, CRSIDs, or lookup groups (an integer).
+  Defines who can see the media item unless ``visibility`` is world-overrule or cam-overrule.
+  ``acl`` and ``visibility`` are combined when migrating to ``sms_acl`` in a new scheme as a comma
+  seperated list. At the risk of stating the obvious, the list is OR'd to produce the access list.
   Each ``ace`` can by of any of the following values
     * ``WORLD``         - world visible
     * ``CAM``           - cambridge visible
@@ -99,7 +99,7 @@ same but prefixed by "`sms_`".
 
 * ``image_id`` - The id of the media item's thumbnail.
 
-* ``dspace_path`` - The path of the media item archived in DSpace. This isn't migrated as it is 
+* ``dspace_path`` - The path of the media item archived in DSpace. This isn't migrated as it is
   irrelevant in the context of jwplayer.
 
 * ``featured`` - Whether or not the media item is featured on the frontpage.
@@ -114,10 +114,10 @@ same but prefixed by "`sms_`".
 
 * ``withdrawn`` - No definition available.
 
-* ``abstract`` - A longer description of the media item. This isn't migrated as it's size makes 
+* ``abstract`` - A longer description of the media item. This isn't migrated as it's size makes
   this impractical.
 
-* ``priority`` - A numeric priority (lowest = 0) that indicates how urgently a media item needs to 
+* ``priority`` - A numeric priority (lowest = 0) that indicates how urgently a media item needs to
   be transcoded. This isn't migrated as it is irrelevant in the context of jwplayer.
 """
 
@@ -151,5 +151,3 @@ def load(fobj, skip_header_row=True):
         MediaItem._make([t(v) for t, v in zip(_MEDIA_ITEM_TYPES, row)])
         for row in reader
     ]
-
-
