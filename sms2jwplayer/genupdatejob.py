@@ -75,14 +75,14 @@ def convert_acl(visibility, acl):
     if has_acl():
         for ace in acl:
             if ace.isdigit():
-                new_acl.append(f'GROUP_{ace}')
+                new_acl.append('GROUP_{}'.format(ace))
             elif ace.upper() == ace:
                 # Testing if a string is uppercase to decide if it represents an institution.
                 # TODO Is this safe? Works for all data as at 2018/03/20.
                 # Otherwise we need to use lookup.
-                new_acl.append(f'INST_{ace}')
+                new_acl.append('INST_{}'.format(ace))
             else:
-                new_acl.append(f'USER_{ace}')
+                new_acl.append('USER_{}'.format(ace))
 
     return ",".join(new_acl)
 
