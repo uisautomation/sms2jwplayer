@@ -2,7 +2,7 @@ dist: trusty
 sudo: false
 language: python
 python:
-    - "3.4"
+    - "3.4" # the python version on the transcode machine
 install:
     - pip install tox
 script:
