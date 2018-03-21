@@ -166,6 +166,3 @@ texinfo_documents = [
      author, 'sms2jwplayer', 'One line description of project.',
      'Miscellaneous'),
 ]
-
-
-

@@ -96,12 +96,16 @@ def process_videos(fobj, items, videos):
         custom_props = {
             'sms_media_id': 'media:{}:'.format(item.media_id),
             'sms_clip_id': 'clip:{}:'.format(item.clip_id),
+            # format - migration not required
+            # filename - migration not required
+            'sms_created_at': 'created_at:{}:'.format(item.created_at.isoformat()),
+            # title - migrated as media item title
+            # description - migrated as media item description
             'sms_collection_id': 'collection:{}:'.format(item.collection_id),
             'sms_instid': 'instid:{}:'.format(item.instid),
-            'sms_in_dspace': 'in_dspace:{}:'.format(item.in_dspace),
-            'sms_created_by': 'creator:{}:'.format(item.creator),
-            'sms_created_at': 'created_at:{}:'.format(item.created_at.isoformat()),
-            'sms_aspect_ratio': 'aspect:{}:'.format(item.aspect_ratio),
+            'sms_aspect_ratio': 'aspect_ratio:{}:'.format(item.aspect_ratio),
+            'sms_created_by': 'created_by:{}:'.format(item.creator),
+            # in_dspace - migration not required
             'sms_publisher': 'publisher:{}:'.format(item.publisher),
             'sms_copyright': 'copyright:{}:'.format(item.copyright),
             'sms_language': 'language:{}:'.format(item.language),
@@ -110,14 +114,15 @@ def process_videos(fobj, items, videos):
             'sms_acl': 'acl:{}:'.format(item.acl),
             'sms_screencast': 'screencast:{}:'.format(item.screencast),
             'sms_image_id': 'image_id:{}:'.format(item.image_id),
-            'sms_dspace_path': 'dspace_path:{}:'.format(item.dspace_path),
+            # dspace_path - migration not required
             'sms_featured': 'featured:{}:'.format(item.featured),
             'sms_branding': 'branding:{}:'.format(item.branding),
             'sms_last_updated_at': 'last_updated_at:{}:'.format(item.last_updated_at),
             'sms_updated_by': 'updated_by:{}:'.format(item.updated_by),
             'sms_downloadable': 'downloadable:{}:'.format(item.downloadable),
             'sms_withdrawn': 'withdrawn:{}:'.format(item.withdrawn),
-            'sms_priority': 'priority:{}:'.format(item.priority),
+            # abstract - migration impractical
+            # priority - migration not required
         }
 
         # remove those which match
