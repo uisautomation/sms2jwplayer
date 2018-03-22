@@ -25,5 +25,6 @@ setup(
         'pytest',
         'pytest-cov',
         'feedparser',
+        'testfixtures',
     ],
 )
