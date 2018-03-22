@@ -24,6 +24,9 @@ import json
 import logging
 from urllib.parse import urlsplit
 
+import re
+
+from sms2jwplayer.institutions import INSTIDS
 from . import csv as smscsv
 from .util import output_stream, get_key_path
 
@@ -50,41 +53,6 @@ def main(opts):
 
     with output_stream(opts) as fobj:
         process_videos(fobj, items, videos)
-
-
-def convert_acl(visibility, acl):
-    """
-    Converts the old visibility and acl fields of :py:`~csv.MediaItem` to the new ACL scheme as
-    defined here: :py:`~csv.MediaItem.acl`.
-
-    :param visibility: :py:`~csv.MediaItem.visibility`
-    :param acl: :py:`~csv.MediaItem.acl` (list)
-    :return: the converted ACL
-    """
-    new_acl = []
-
-    def has_acl():
-        """Captures the case where the ACL [''] means no ACL """
-        return len(acl) != 1 or acl[0] if acl else False
-
-    if visibility == 'world-overrule' or (visibility == 'world' and not has_acl()):
-        new_acl.append('WORLD')
-    elif visibility == 'cam-overrule' or (visibility == 'cam' and not has_acl()):
-        new_acl.append('CAM')
-
-    if has_acl():
-        for ace in acl:
-            if ace.isdigit():
-                new_acl.append('GROUP_{}'.format(ace))
-            elif ace.upper() == ace:
-                # Testing if a string is uppercase to decide if it represents an institution.
-                # TODO Is this safe? Works for all data as at 2018/03/20.
-                # Otherwise we need to use lookup.
-                new_acl.append('INST_{}'.format(ace))
-            else:
-                new_acl.append('USER_{}'.format(ace))
-
-    return ",".join(new_acl)
 
 
 def process_videos(fobj, items, videos):
@@ -175,3 +143,41 @@ def process_videos(fobj, items, videos):
     LOG.info('Number of video updates: %s', len(updates))
 
     json.dump({'updates': updates}, fobj)
+
+
+# A regex pattern for CRSID matching.
+CRSID_PATTERN = re.compile("^[A-Za-z]+[0-9]+$")
+
+
+def convert_acl(visibility, acl):
+    """
+    Converts the old visibility and acl fields of :py:`~csv.MediaItem` to the new ACL scheme as
+    defined here: :py:`~csv.MediaItem.acl`.
+
+    :param visibility: :py:`~csv.MediaItem.visibility`
+    :param acl: :py:`~csv.MediaItem.acl` (list)
+    :return: the converted ACL
+    """
+    new_acl = []
+
+    def has_acl():
+        """Captures the case where the ACL [''] means no ACL """
+        return len(acl) != 1 or acl[0] if acl else False
+
+    if visibility == 'world-overrule' or (visibility == 'world' and not has_acl()):
+        new_acl.append('WORLD')
+    elif visibility == 'cam-overrule' or (visibility == 'cam' and not has_acl()):
+        new_acl.append('CAM')
+
+    if has_acl():
+        for ace in acl:
+            if ace.isdigit():
+                new_acl.append('GROUP_{}'.format(ace))
+            elif ace.upper() in INSTIDS:
+                new_acl.append('INST_{}'.format(ace.upper()))
+            elif CRSID_PATTERN.match(ace):
+                new_acl.append('USER_{}'.format(ace))
+            else:
+                LOG.warning('The ACE "{}" cannot be resolved'.format(ace))
+
+    return ",".join(new_acl)

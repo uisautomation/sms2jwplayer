@@ -1,5 +1,6 @@
 import logging
 import unittest
+from testfixtures import LogCapture
 
 from sms2jwplayer.genupdatejob import convert_acl
 
@@ -7,7 +8,7 @@ LOG = logging.getLogger(__name__)
 
 
 class ConvertAclTests(unittest.TestCase):
-    """All tests for :py:`~genupdatejob.convert_acl`"""
+    """ All tests for :py:`~genupdatejob.convert_acl` """
 
     def test_null_acls(self):
         """Check in particular that [''] is treated as a null ACL"""
@@ -79,3 +80,20 @@ class ConvertAclTests(unittest.TestCase):
             'world-overrule', ['jar35', 'lmd11', 'hs243']),
             'WORLD,USER_jar35,USER_lmd11,USER_hs243'
         )
+
+    def test_lowercase_institutions(self):
+        """ Check that a lowercase institution is recognised and upper-cased. """
+
+        self.assertEqual(
+            convert_acl('acl-overrule', ['iocs']),
+            'INST_IOCS'
+        )
+
+    def test_ace_not_resolved(self):
+        """ Check that we warn when we can't resolve an ACE. """
+        with LogCapture(level=logging.INFO) as log:
+            self.assertEqual(
+                convert_acl('acl-overrule', ['hpcr', 'aj333']),
+                'USER_aj333'
+            )
+            log.check(('genmrss', 'WARNING', 'The ACE "hpcr" cannot be resolved'))
