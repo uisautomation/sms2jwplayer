@@ -22,10 +22,8 @@ It outputs a single JSON object with the following schema:
 """
 import json
 import logging
-from urllib.parse import urlsplit
-
 import re
-
+from urllib.parse import urlsplit
 from sms2jwplayer.institutions import INSTIDS
 from . import csv as smscsv
 from .util import output_stream, get_key_path

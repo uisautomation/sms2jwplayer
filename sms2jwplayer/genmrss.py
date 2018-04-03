@@ -84,7 +84,7 @@ def main(opts):
 
     def image_url(item):
         """Return the URL for an image_id."""
-        return urllib.parse.urljoin(opts['--base-image-url'], str(item.image_id))
+        return urllib.parse.urljoin(opts['--base-image-url'], str(item.image_id)+".jpg")
 
     env = Environment(autoescape=select_autoescape(
         enabled_extensions=['html', 'xml'],
