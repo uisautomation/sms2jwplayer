@@ -7,8 +7,8 @@ Usage:
         [--output=FILE] [--limit=NUMBER] [--offset=NUMBER] <csv>
     sms2jwplayer fetch [--verbose] [--base-name=NAME]
     sms2jwplayer genupdatejob [--verbose] [--strip-leading=N]
-        [--output=FILE] <csv> <metadata>...
-    sms2jwplayer applyupdatejob [--verbose] [<update>]
+        [--output=FILE] --base=URL --base-image-url=URL <csv> <metadata>...
+    sms2jwplayer applyupdatejob [--verbose] [--log-file=FILE] [<update>]
     sms2jwplayer analytics [--output=FILE] [--verbose] <date>
 
 Options:

@@ -33,6 +33,7 @@ installed via the ``pip`` command:
 
     $ git clone $REPO sms2jwplayer
     $ cd sms2jwplayer
+    $ pip install -r requirements.txt  # for specific package versions
     $ pip install .
 
 Where ``$REPO`` is replaced with the location of the ``sms2jwplayer``
