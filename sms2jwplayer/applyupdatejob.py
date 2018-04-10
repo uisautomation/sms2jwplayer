@@ -16,7 +16,7 @@ The Create object specifies a list of JWPlatform resources which should be creat
 .. code:: js
 
     {
-        "type": { "videos", "thumbnails", ... }
+        "type": "videos",  // or "thumbnails", etc
         "resource: {
             // dictionary of resource properties
         }
@@ -27,9 +27,20 @@ The Update object specifies a list of JWPlatform resources which need to be upda
 .. code:: js
 
     {
-        "type": { "videos", "thumbnails", ... }
+        "type": "videos",  // or "thumbnails", etc
         "resource": {
             // dictionary of properties to update
+        }
+    }
+
+The Delete object specifies a list of JWPlatform resources which need to be deleted:
+
+.. code:: js
+
+    {
+        "type": "videos",  // or "thumbnails", etc
+        "resource": {
+            // dictionary of parameters to delete request
         }
     }
 
@@ -61,15 +72,17 @@ def main(opts):
     with util.input_stream(opts, '<update>') as f:
         jobs = json.load(f)
 
-    updates, creates = [jobs.get(k, []) for k in ['update', 'create']]
+    updates, creates, deletes = [jobs.get(k, []) for k in ['update', 'create', 'delete']]
 
     LOG.info('Number of update jobs to process: %s', len(updates))
     LOG.info('Number of create jobs to process: %s', len(creates))
+    LOG.info('Number of delete jobs to process: %s', len(deletes))
 
     # If verbose flag is present, give a nice progress bar
     if opts['--verbose'] is not None:
         updates = tqdm.tqdm(updates)
         creates = tqdm.tqdm(creates)
+        deletes = tqdm.tqdm(deletes)
 
     create_responses = list(
         execute_api_calls_respecting_rate_limit(create_calls(client, creates))
@@ -79,11 +92,16 @@ def main(opts):
         execute_api_calls_respecting_rate_limit(update_calls(client, updates))
     )
 
+    delete_responses = list(
+        execute_api_calls_respecting_rate_limit(delete_calls(client, deletes))
+    )
+
     if opts['--log-file'] is not None:
         with util.output_stream(opts, '--log-file') as f:
             json.dump({
                 'create_responses': create_responses,
                 'update_responses': update_responses,
+                'delete_responses': delete_responses,
             }, f)
 
 
@@ -144,6 +162,19 @@ def update_calls(client, updates):
             yield lambda: client.videos.update(http_method='POST', **resource_to_params(resource))
         else:
             LOG.warning('Skipping unknown update type: %s', type_)
+
+
+def delete_calls(client, deletes):
+    """
+    Return an iterator of callables representing the API calls for each delete job.
+    """
+    for delete in deletes:
+        type_, resource = delete.get('type'), delete.get('resource', {})
+
+        if type_ == 'videos':
+            yield lambda: client.videos.delete(http_method='POST', **resource_to_params(resource))
+        else:
+            LOG.warning('Skipping unknown delete type: %s', type_)
 
 
 def execute_api_calls_respecting_rate_limit(call_iterable):

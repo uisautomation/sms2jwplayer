@@ -1,37 +1,7 @@
 """
 The genupdatejob subcommand examines video metadata from jwplayer and the current SMS export and
-generates a list of updates which should be applied.
-
-It outputs a single JSON object with the following schema:
-
-.. code:: js
-
-    {
-        "create": List<Create>,
-        "update": List<Update>
-    }
-
-The Create object specifies a list of JWPlatform resources which should be created:
-
-.. code:: js
-
-    {
-        "type": { "videos", "thumbnails", ... }
-        "resource: {
-            // dictionary of resource properties
-        }
-    }
-
-The Update object specifies a list of JWPlatform resources which need to be updated:
-
-.. code:: js
-
-    {
-        "type": { "videos", "thumbnails", ... }
-        "resource": {
-            // dictionary of properties to update
-        }
-    }
+generates a list of updates which should be applied. See the documentation for
+:py:mod:`.applyupdatejob` for a description of the update job format.
 
 """
 import json
