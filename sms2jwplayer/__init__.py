@@ -10,6 +10,7 @@ Usage:
         [--output=FILE] --base=URL --base-image-url=URL <csv> <metadata>...
     sms2jwplayer applyupdatejob [--verbose] [--log-file=FILE] [<update>]
     sms2jwplayer analytics [--output=FILE] [--verbose] <date>
+    sms2jwplayer tidy [--output=FILE] [--verbose] <metadata>...
 
 Options:
     -h, --help          Show a brief usage summary.
@@ -43,6 +44,7 @@ Sub commands:
     fetch               Fetch details on all videos in jwplayer.
     genupdatejob        Generate list of missing metadata for each video key.
     analytics           Generate SMS analytics for a given day.
+    tidy                Generate an update job which tidies the jwplayer database.
 
 """
 import logging
@@ -67,3 +69,6 @@ def main():
     elif opts['analytics']:
         from . import analytics
         analytics.main(opts)
+    elif opts['tidy']:
+        from . import tidy
+        tidy.main(opts)
