@@ -43,6 +43,7 @@ Sub commands:
     genmrss             Generate an MRSS feed for the export.
     fetch               Fetch details on all videos in jwplayer.
     genupdatejob        Generate list of missing metadata for each video key.
+    applyupdatejob      Use JWPlatform API to update videos based on a job description file.
     analytics           Generate SMS analytics for a given day.
     tidy                Generate an update job which tidies the jwplayer database.
 
