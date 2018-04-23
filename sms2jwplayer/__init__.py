@@ -7,9 +7,10 @@ Usage:
         [--output=FILE] [--limit=NUMBER] [--offset=NUMBER] <csv>
     sms2jwplayer fetch [--verbose] [--base-name=NAME]
     sms2jwplayer genupdatejob [--verbose] [--strip-leading=N]
-        [--output=FILE] <csv> <metadata>...
-    sms2jwplayer applyupdatejob [--verbose] [<update>]
+        [--output=FILE] --base=URL --base-image-url=URL <csv> <metadata>...
+    sms2jwplayer applyupdatejob [--verbose] [--log-file=FILE] [<update>]
     sms2jwplayer analytics [--output=FILE] [--verbose] <date>
+    sms2jwplayer tidy [--output=FILE] [--verbose] <metadata>...
 
 Options:
     -h, --help          Show a brief usage summary.
@@ -42,7 +43,9 @@ Sub commands:
     genmrss             Generate an MRSS feed for the export.
     fetch               Fetch details on all videos in jwplayer.
     genupdatejob        Generate list of missing metadata for each video key.
+    applyupdatejob      Use JWPlatform API to update videos based on a job description file.
     analytics           Generate SMS analytics for a given day.
+    tidy                Generate an update job which tidies the jwplayer database.
 
 """
 import logging
@@ -67,3 +70,6 @@ def main():
     elif opts['analytics']:
         from . import analytics
         analytics.main(opts)
+    elif opts['tidy']:
+        from . import tidy
+        tidy.main(opts)

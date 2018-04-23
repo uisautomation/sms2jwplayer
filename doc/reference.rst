@@ -45,3 +45,9 @@ Extracting video view stats
 
 .. automodule:: sms2jwplayer.analytics
     :members:
+
+Tidy database
+-------------
+
+.. automodule:: sms2jwplayer.tidy
+    :members:

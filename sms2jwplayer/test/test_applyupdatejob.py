@@ -31,16 +31,19 @@ class ApplyUpdateJobTests(JWPlatformTestCase):
             jobfile = os.path.join(tmp_dir, 'job.json')
             with open(jobfile, 'w') as f:
                 json.dump({
-                    'updates': [
-                        {'key': 'abc', 'custom': {'one': 1}},
-                        {'key': 'def', 'custom': {'foo': 'bar', 'buzz': 3}},
+                    'update': [
+                        {'type': 'videos', 'resource': {'video_key': 'abc', 'custom': {'one': 1}}},
+                        {'type': 'videos', 'resource': {
+                            'video_key': 'def', 'custom': {'foo': 'bar', 'buzz': 3}
+                        }},
                     ]
                 }, f)
             applyupdatejob(jobfile)
 
         self.client.videos.update.assert_has_calls([
-            mock.call(**{'video_key': 'abc', 'custom.one': '1'}),
-            mock.call(**{'video_key': 'def', 'custom.foo': 'bar', 'custom.buzz': '3'}),
+            mock.call(**{'video_key': 'abc', 'custom.one': 1, 'http_method': 'POST'}),
+            mock.call(**{'video_key': 'def', 'custom.foo': 'bar', 'custom.buzz': 3,
+                         'http_method': 'POST'}),
         ], any_order=True)
 
 

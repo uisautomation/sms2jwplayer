@@ -96,4 +96,5 @@ class ConvertAclTests(unittest.TestCase):
                 convert_acl('acl-overrule', ['hpcr', 'aj333']),
                 'USER_aj333'
             )
-            log.check(('genmrss', 'WARNING', 'The ACE "hpcr" cannot be resolved'))
+            log.check(('sms2jwplayer.genupdatejob', 'WARNING',
+                       'The ACE "hpcr" cannot be resolved'))
