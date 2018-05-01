@@ -73,9 +73,9 @@ Generating an MRSS Feed
 
 This tool ships with a script which can be used to automatically export the
 current state of the SMS archive into a MRSS feed suitable for passing to
-jwplayer. The script can be found at ``scripts/export_sms_feed.sh``.
+jwplayer. The script can be found at ``scripts/export_sms_csv.sh``.
 
-.. literalinclude:: ../scripts/export_sms_feed.sh
+.. literalinclude:: ../scripts/export_sms_csv.sh
     :start-after: #!/usr/bin/env bash
     :end-before: set -e
     :language: shell

@@ -3,8 +3,6 @@ Tool to support bulk import of University of Cambridge SMS into JWPlayer.
 
 Usage:
     sms2jwplayer (-h | --help)
-    sms2jwplayer genmrss [--verbose] --base=URL --base-image-url=URL [--strip-leading=N]
-        [--output=FILE] [--limit=NUMBER] [--offset=NUMBER] <csv>
     sms2jwplayer fetch [--verbose] [--base-name=NAME]
     sms2jwplayer genupdatejob [--verbose] [--strip-leading=N]
         [--output=FILE] --base=URL --base-image-url=URL <csv> <metadata>...
@@ -40,7 +38,6 @@ Options:
 
 Sub commands:
 
-    genmrss             Generate an MRSS feed for the export.
     fetch               Fetch details on all videos in jwplayer.
     genupdatejob        Generate list of missing metadata for each video key.
     applyupdatejob      Use JWPlatform API to update videos based on a job description file.
@@ -55,10 +52,7 @@ import docopt
 def main():
     opts = docopt.docopt(__doc__)
     logging.basicConfig(level=logging.INFO if opts['--verbose'] else logging.WARN)
-    if opts['genmrss']:
-        from . import genmrss
-        genmrss.main(opts)
-    elif opts['fetch']:
+    if opts['fetch']:
         from . import fetch
         fetch.main(opts)
     elif opts['genupdatejob']:
