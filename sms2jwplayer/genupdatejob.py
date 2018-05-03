@@ -115,6 +115,17 @@ def process_videos(opts, fobj, items, videos):
                 'type': 'videos',
                 'resource': update,
             })
+            if item.image_md5 and 'sms_image_md5' in delta.get('custom', {}):
+                # there is an SMS image and JWPlayer image MD5 either doesn't exist
+                # or doesn't match it - so we need to load the image
+                updates.append({
+                    'type': 'image_load',
+                    'resource': {'video_key': video['key'], 'image_url': image_url(opts, item)},
+                })
+
+        if item.image_md5 and video['custom'].get('sms_image_status') == 'image_status:loaded:':
+            # there is an SMS image and the image has been loaded but needs to be checked
+            updates.append({'type': 'image_check', 'resource': {'video_key': video['key']}})
 
     # Generate creates for new videos
     create_clip_ids = set()

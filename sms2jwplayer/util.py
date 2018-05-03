@@ -5,12 +5,17 @@ program to use.
 """
 
 import contextlib
+import json
+import logging
 import os
 import re
 import sys
+import urllib
 
 import jwplatform
+import requests
 
+LOG = logging.getLogger(__name__)
 
 #: regex for parsing a custom prop field
 CUSTOM_PROP_VALUE_RE = re.compile(r'^([a-z][a-z0-9_]*):(.*):$')
@@ -158,3 +163,28 @@ def key_for_media_id(media_id, preferred_media_type='video', client=None):
         raise VideoNotFoundError()
 
     return video_resource['key']
+
+
+def upload_thumbnail_from_url(video_key, image_url, client=None):
+    """
+    Updates the thumbnail for a particular video object with the image at image_url.
+
+    :param video_key: <string> Video's object ID. Can be found within JWPlayer Dashboard.
+    :param image_url: The public URL on the image to use as a thumbnail
+    :param client: (options) an authenticated JWPlatform client as returned by
+        :py:func:`.get_jwplatform_client`. If ``None``, call :py:func:`.get_jwplatform_client`.
+    """
+    client = client if client is not None else get_jwplatform_client()
+
+    response = client.videos.thumbnails.update(video_key=video_key)
+
+    # construct base url for upload
+    url = '{0[protocol]}://{0[address]}{0[path]}'.format(response['link'])
+
+    # add required 'api_format' to the upload query params
+    response['link']['query']['api_format'] = 'json'
+
+    files = {'file': urllib.request.urlopen(image_url)}
+
+    response = requests.post(url, params=response['link']['query'], files=files)
+    return json.loads(response.text)

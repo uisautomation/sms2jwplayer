@@ -1,2 +1,2 @@
-# Special version of jwplatform with bug fixes
-git+https://github.com/uisautomation/third-party-jwplatform-py#egg=jwplatform
+.
+git+https://github.com/jwplayer/jwplatform-py#egg=jwplatform

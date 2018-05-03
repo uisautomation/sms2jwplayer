@@ -16,7 +16,7 @@ The Create object specifies a list of JWPlatform resources which should be creat
 .. code:: js
 
     {
-        "type": "videos",  // or "thumbnails", etc
+        "type": "videos",
         "resource: {
             // dictionary of resource properties
         }
@@ -27,7 +27,7 @@ The Update object specifies a list of JWPlatform resources which need to be upda
 .. code:: js
 
     {
-        "type": "videos",  // or "thumbnails", etc
+        "type": "videos|image_load|image_load|image_check",
         "resource": {
             // dictionary of properties to update
         }
@@ -38,7 +38,7 @@ The Delete object specifies a list of JWPlatform resources which need to be dele
 .. code:: js
 
     {
-        "type": "videos",  // or "thumbnails", etc
+        "type": "videos",
         "resource": {
             // dictionary of parameters to delete request
         }
@@ -158,8 +158,45 @@ def update_calls(client, updates):
     for update in updates:
         type_, resource = update.get('type'), update.get('resource', {})
 
+        def image_load():
+            """
+            uploads an SMS thumbnail image and, if successful, sets the custom 'image_status'
+            parameter to 'loaded'
+            """
+            response = util.upload_thumbnail_from_url(client=client, **resource)
+            if response['status'] == 'ok':
+                update_response = client.videos.update(http_method='POST', **{
+                    'video_key': resource['video_key'],
+                    'custom.sms_image_status': 'image_status:loaded:'
+                })
+                response = {
+                    'upload': response,
+                    'update': update_response
+                }
+            return response
+
+        def image_check():
+            """
+            checks the status of an upload thumbnail image and records this status in the custom
+            'image_status' parameter
+            """
+            response = client.videos.thumbnails.show(**resource)
+            status = response['thumbnail']['status']
+            update_response = client.videos.update(http_method='POST', **{
+                'video_key': resource['video_key'],
+                'custom.sms_image_status': 'image_status:{}:'.format(status)
+            })
+            return {
+                'show': response,
+                'update': update_response
+            }
+
         if type_ == 'videos':
             yield lambda: client.videos.update(http_method='POST', **resource_to_params(resource))
+        elif type_ == 'image_load':
+            yield image_load
+        elif type_ == 'image_check':
+            yield image_check
         else:
             LOG.warning('Skipping unknown update type: %s', type_)
 
@@ -204,6 +241,10 @@ def execute_api_calls_respecting_rate_limit(call_iterable):
 
 
 def resource_to_params(resource):
+    """
+    flattens the keys of a dict:
+        eg. converts {'a': {'x': 1, 'y': 2}, 'b': 3} to {'a.x': 1, 'a.y': 2, 'b': 3}
+    """
     def iterate(d, prefix=''):
         for k, v in d.items():
             if isinstance(v, dict):
