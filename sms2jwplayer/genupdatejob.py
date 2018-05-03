@@ -101,7 +101,7 @@ def process_videos(opts, fobj, items, videos):
 
     # Generate updates for existing videos
     for item, video in associations:
-        expected_video = video_resource(opts, item)
+        expected_video = video_resource(item)
 
         # Calculate delta from resource which exists to expected resource
         delta = updated_keys(video, expected_video)
@@ -143,7 +143,7 @@ def process_videos(opts, fobj, items, videos):
 
         create_clip_ids.add(item.clip_id)
 
-        video = video_resource(opts, item)
+        video = video_resource(item)
         video.update({
             'download_url': url(opts, item),
         })
@@ -176,13 +176,13 @@ def updated_keys(source, target):
             source_value = source[key]
         except KeyError:
             # Key is not in source, set it in delta
-            delta[key] = source_value
+            delta[key] = value
         else:
             # Key is in source
             if isinstance(value, dict):
                 # Value is itself a dict so recurse
                 sub_delta = updated_keys(source_value, value)
-                if len(sub_delta) > 1:
+                if len(sub_delta) > 0:
                     delta[key] = sub_delta
             elif value != source_value:
                 # Value differs between source and target. Return delta.
@@ -191,7 +191,7 @@ def updated_keys(source, target):
     return delta
 
 
-def video_resource(opts, item):
+def video_resource(item):
     """
     Construct what the JWPlatform video resource for a SMS media item should look like.
 
@@ -249,6 +249,7 @@ def custom_props_for_item(item):
         'sms_acl': 'acl:{}:'.format(convert_acl(item.visibility, item.acl)),
         'sms_screencast': 'screencast:{}:'.format(item.screencast),
         'sms_image_id': 'image_id:{}:'.format(item.image_id),
+        'sms_image_md5': 'image_md5:{}:'.format(item.image_md5),
         # dspace_path - migration not required
         'sms_featured': 'featured:{}:'.format(item.featured),
         'sms_branding': 'branding:{}:'.format(item.branding),
@@ -308,7 +309,7 @@ def url(opts, item):
 
 def image_url(opts, item):
     """Return the URL for an image_id."""
-    return urllib.parse.urljoin(opts['--base-image-url'], str(item.image_id)+".jpg")
+    return urllib.parse.urljoin(opts['--base-image-url'], str(item.image_id))
 
 
 def sanitise(s, max_length=4096):

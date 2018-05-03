@@ -59,6 +59,7 @@ COPY (
 		m.acl AS acl,
 		m.screencast AS screencast,
 		coalesce(m.image_id, sms_collection.image_id) AS image_id,
+        md5(i.data) AS image_md5,
 		m.dspace_path AS dspace_path,
 		m.featured AS featured,
 		m.branding AS branding,
@@ -70,8 +71,9 @@ COPY (
 		m.priority AS priority
 	FROM
 		sms_media m
-		JOIN sms_clip ON m.id = sms_clip.media_id
+		JOIN sms_clip ON sms_clip.media_id = m.id
 		JOIN sms_collection ON sms_collection.id = m.collection_id
+		LEFT OUTER JOIN sms_image i on i.id = coalesce(m.image_id, sms_collection.image_id)
 	WHERE
 		( sms_clip.format = 'archive-h264' OR sms_clip.format = 'audio' )
 		AND sms_clip.quality = 'high'
