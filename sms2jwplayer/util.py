@@ -5,7 +5,6 @@ program to use.
 """
 
 import contextlib
-import json
 import logging
 import os
 import re
@@ -186,5 +185,4 @@ def upload_thumbnail_from_url(video_key, image_url, client=None):
 
     files = {'file': urllib.request.urlopen(image_url)}
 
-    response = requests.post(url, params=response['link']['query'], files=files)
-    return json.loads(response.text)
+    return requests.post(url, params=response['link']['query'], files=files).json()

@@ -33,7 +33,7 @@ class UtilTests(JWPlatformTestCase):
 
         requests_post = self.patch_and_start('requests.post')
         requests_post.return_value = mock.Mock()
-        requests_post.return_value.text = '{"status": "ok"}'
+        requests_post.return_value.json.return_value = {"status": "ok"}
 
         # test
 

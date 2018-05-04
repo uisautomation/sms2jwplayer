@@ -158,6 +158,9 @@ def update_calls(client, updates):
     for update in updates:
         type_, resource = update.get('type'), update.get('resource', {})
 
+        def log(response):
+            return {'job': resource, 'log': response}
+
         def image_load():
             """
             uploads an SMS thumbnail image and, if successful, sets the custom 'image_status'
@@ -173,7 +176,7 @@ def update_calls(client, updates):
                     'upload': response,
                     'update': update_response
                 }
-            return response
+            return log(response)
 
         def image_check():
             """
@@ -186,13 +189,12 @@ def update_calls(client, updates):
                 'video_key': resource['video_key'],
                 'custom.sms_image_status': 'image_status:{}:'.format(status)
             })
-            return {
-                'show': response,
-                'update': update_response
-            }
+            return log({'show': response, 'update': update_response})
 
         if type_ == 'videos':
-            yield lambda: client.videos.update(http_method='POST', **resource_to_params(resource))
+            yield lambda: log(
+                client.videos.update(http_method='POST', **resource_to_params(resource))
+            )
         elif type_ == 'image_load':
             yield image_load
         elif type_ == 'image_check':

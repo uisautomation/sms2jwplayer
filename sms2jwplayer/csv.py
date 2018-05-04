@@ -97,9 +97,11 @@ same but prefixed by "`sms_`".
 
 * ``screencast`` - Whether or not the media item is a screencast.
 
-* ``image_id`` - The id of the media item's thumbnail - empty if a thumbnail was never uploaded.
+* ``image_id`` - The id of the media item's custom thumbnail - empty if a thumbnail was never
+  uploaded to legacy SMS.
 
-* ``image_md5`` - The md5 of the media item's thumbnail - empty if a thumbnail was never uploaded.
+* ``image_md5`` - The md5 of the media item's custom thumbnail - empty if a thumbnail was never
+  uploaded to legacy SMS.
 
 * ``dspace_path`` - The path of the media item archived in DSpace. This isn't migrated as it is
   irrelevant in the context of jwplayer.
