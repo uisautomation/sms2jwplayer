@@ -13,6 +13,7 @@ import urllib
 
 import jwplatform
 import requests
+import time
 
 LOG = logging.getLogger(__name__)
 
@@ -164,7 +165,7 @@ def key_for_media_id(media_id, preferred_media_type='video', client=None):
     return video_resource['key']
 
 
-def upload_thumbnail_from_url(video_key, image_url, client=None):
+def upload_thumbnail_from_url(video_key, image_url, delay=None, client=None):
     """
     Updates the thumbnail for a particular video object with the image at image_url.
 
@@ -176,6 +177,8 @@ def upload_thumbnail_from_url(video_key, image_url, client=None):
     client = client if client is not None else get_jwplatform_client()
 
     response = client.videos.thumbnails.update(video_key=video_key)
+    if delay:
+        time.sleep(delay)
 
     # construct base url for upload
     url = '{0[protocol]}://{0[address]}{0[path]}'.format(response['link'])

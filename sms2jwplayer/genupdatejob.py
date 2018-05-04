@@ -128,7 +128,9 @@ def process_videos(opts, fobj, items, videos):
                     # or doesn't match it - so we need to load the image
                     updates.append({
                         'type': 'image_load',
-                        'resource': {'video_key': video['key'], 'image_url': image_url(opts, item)},
+                        'resource': {
+                            'video_key': video['key'], 'image_url': image_url(opts, item)
+                        },
                     })
 
         if item.image_md5 and video['custom'].get('sms_image_status') == 'image_status:loaded:':
