@@ -16,7 +16,7 @@ The Create object specifies a list of JWPlatform resources which should be creat
 .. code:: js
 
     {
-        "type": "videos",  // or "thumbnails", etc
+        "type": "videos",
         "resource: {
             // dictionary of resource properties
         }
@@ -27,7 +27,7 @@ The Update object specifies a list of JWPlatform resources which need to be upda
 .. code:: js
 
     {
-        "type": "videos",  // or "thumbnails", etc
+        "type": "videos|image_load|image_load|image_check",
         "resource": {
             // dictionary of properties to update
         }
@@ -38,7 +38,7 @@ The Delete object specifies a list of JWPlatform resources which need to be dele
 .. code:: js
 
     {
-        "type": "videos",  // or "thumbnails", etc
+        "type": "videos",
         "resource": {
             // dictionary of parameters to delete request
         }
@@ -59,7 +59,10 @@ from . import util
 LOG = logging.getLogger('applyupdatejob')
 
 #: Maximum number of attempts on an API call before giving up
-MAX_ATTEMPTS = 10
+MAX_ATTEMPTS = 20
+
+#: Maximum delay bewtween each API call
+MAX_DELAY = 3.
 
 
 def main(opts):
@@ -118,7 +121,7 @@ def create_calls(client, updates):
             # We wrap the entire create/update process in a function since we make use of two API
             # calls (one is via key_for_media_id). Hence we want to re-try the entire thing if we
             # hit the API rate limit.
-            def do_create():
+            def do_create(delay):
                 # If video_key is set to anything other than None, an update of that video key will
                 # be done instead.
                 video_key = None
@@ -158,10 +161,56 @@ def update_calls(client, updates):
     for update in updates:
         type_, resource = update.get('type'), update.get('resource', {})
 
-        if type_ == 'videos':
-            yield lambda: client.videos.update(http_method='POST', **resource_to_params(resource))
-        else:
-            LOG.warning('Skipping unknown update type: %s', type_)
+        def log(response):
+            return {'job': resource, 'log': response}
+
+        def image_load(delay):
+            """
+            uploads an SMS thumbnail image and, if successful, sets the custom 'image_status'
+            parameter to 'loaded'
+            """
+            response = util.upload_thumbnail_from_url(client=client, **resource)
+            if response['status'] == 'ok':
+                time.sleep(delay)
+                update_response = client.videos.update(http_method='POST', **{
+                    'video_key': resource['video_key'],
+                    'custom.sms_image_status': 'image_status:loaded:'
+                })
+                response = {
+                    'upload': response,
+                    'update': update_response
+                }
+            return log(response)
+
+        def image_check(delay):
+            """
+            checks the status of an upload thumbnail image and records this status in the custom
+            'image_status' parameter
+            """
+            response = client.videos.thumbnails.show(**resource)
+            time.sleep(delay)
+            status = response['thumbnail']['status']
+            update_response = client.videos.update(http_method='POST', **{
+                'video_key': resource['video_key'],
+                'custom.sms_image_status': 'image_status:{}:'.format(status)
+            })
+            return log({'show': response, 'update': update_response})
+
+        try:
+            if type_ == 'videos':
+                yield lambda delay: log(
+                    client.videos.update(http_method='POST', **resource_to_params(resource))
+                )
+            elif type_ == 'image_load':
+                yield image_load
+            elif type_ == 'image_check':
+                yield image_check
+            else:
+                LOG.warning('Skipping unknown update type: %s', type_)
+        except JWPlatformRateLimitExceededError as e:
+            raise JWPlatformRateLimitExceededError(
+                "{}: {}: {}".format(type_, resource['video_key'], e.message)
+            )
 
 
 def delete_calls(client, deletes):
@@ -172,7 +221,9 @@ def delete_calls(client, deletes):
         type_, resource = delete.get('type'), delete.get('resource', {})
 
         if type_ == 'videos':
-            yield lambda: client.videos.delete(http_method='POST', **resource_to_params(resource))
+            yield lambda delay: client.videos.delete(
+                http_method='POST', **resource_to_params(resource)
+            )
         else:
             LOG.warning('Skipping unknown delete type: %s', type_)
 
@@ -191,19 +242,28 @@ def execute_api_calls_respecting_rate_limit(call_iterable):
     delay = 0.1  # seconds
 
     for api_call in call_iterable:
+        error_message = None
         for _ in range(MAX_ATTEMPTS):
             try:
-                yield api_call()
+                yield api_call(delay)
 
                 # On a successful call, slightly shorten the delay
-                delay = max(1e-2, min(2., delay * 0.8))
+                delay = max(1e-2, min(MAX_DELAY, delay * 0.8))
                 time.sleep(delay)
                 break
-            except JWPlatformRateLimitExceededError:
-                delay = max(1e-2, min(2., 2. * delay))
+            except JWPlatformRateLimitExceededError as error:
+                delay = max(1e-2, min(MAX_DELAY, 2. * delay))
+                time.sleep(delay)
+                error_message = error.message
+        if error_message:
+            yield "MAX_ATTEMPTS: " + error_message
 
 
 def resource_to_params(resource):
+    """
+    flattens the keys of a dict:
+        eg. converts {'a': {'x': 1, 'y': 2}, 'b': 3} to {'a.x': 1, 'a.y': 2, 'b': 3}
+    """
     def iterate(d, prefix=''):
         for k, v in d.items():
             if isinstance(v, dict):

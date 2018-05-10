@@ -9,7 +9,7 @@ import sys
 from .util import get_jwplatform_client, JWPlatformClientError
 
 
-LOG = logging.getLogger('fetch')
+LOG = logging.getLogger(__name__)
 
 
 def main(opts):

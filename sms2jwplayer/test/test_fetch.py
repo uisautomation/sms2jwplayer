@@ -53,12 +53,7 @@ class FetchTests(JWPlatformTestCase):
     def setUp(self):
         super().setUp()
         credentials = {'JWPLAYER_API_KEY': 'xxx', 'JWPLAYER_API_SECRET': 'yyy'}
-        self.environ_patcher = mock.patch('os.environ', credentials)
-        self.environ_patcher.start()
-
-    def tearDown(self):
-        self.environ_patcher.stop()
-        super().tearDown()
+        self.patch_and_start('os.environ', credentials)
 
     def test_basic_call(self):
         self.client.videos.list.return_value = {
