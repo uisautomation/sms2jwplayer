@@ -101,7 +101,7 @@ def process_videos(opts, fobj, items, videos):
 
     # Generate updates for existing videos
     for item, video in associations:
-        expected_video = video_resource(opts, item)
+        expected_video = video_resource(item)
 
         # Calculate delta from resource which exists to expected resource
         delta = updated_keys(video, expected_video)
@@ -115,6 +115,27 @@ def process_videos(opts, fobj, items, videos):
                 'type': 'videos',
                 'resource': update,
             })
+            if item.image_md5:
+                image_status = get_key_path(video, 'custom.sms_image_status')
+                image_md5_changed = 'sms_image_md5' in delta.get('custom', {})
+                # We want to trigger an upload of an image in the following circumstances:
+                #   - The MD5s do not match *and* there is not an upload currently in progress
+                md5_mismatch = image_md5_changed and image_status != 'image_status:loaded:'
+                #   - The MD5s match but the matching upload was never attempted
+                no_upload = not image_md5_changed and not image_status
+                if md5_mismatch or no_upload:
+                    # there is an SMS image and JWPlayer image MD5 either doesn't exist
+                    # or doesn't match it - so we need to load the image
+                    updates.append({
+                        'type': 'image_load',
+                        'resource': {
+                            'video_key': video['key'], 'image_url': image_url(opts, item)
+                        },
+                    })
+
+        if item.image_md5 and video['custom'].get('sms_image_status') == 'image_status:loaded:':
+            # there is an SMS image and the image has been loaded but needs to be checked
+            updates.append({'type': 'image_check', 'resource': {'video_key': video['key']}})
 
     # Generate creates for new videos
     create_clip_ids = set()
@@ -143,7 +164,7 @@ def process_videos(opts, fobj, items, videos):
 
         create_clip_ids.add(item.clip_id)
 
-        video = video_resource(opts, item)
+        video = video_resource(item)
         video.update({
             'download_url': url(opts, item),
         })
@@ -176,13 +197,13 @@ def updated_keys(source, target):
             source_value = source[key]
         except KeyError:
             # Key is not in source, set it in delta
-            delta[key] = source_value
+            delta[key] = value
         else:
             # Key is in source
             if isinstance(value, dict):
                 # Value is itself a dict so recurse
                 sub_delta = updated_keys(source_value, value)
-                if len(sub_delta) > 1:
+                if len(sub_delta) > 0:
                     delta[key] = sub_delta
             elif value != source_value:
                 # Value differs between source and target. Return delta.
@@ -191,7 +212,7 @@ def updated_keys(source, target):
     return delta
 
 
-def video_resource(opts, item):
+def video_resource(item):
     """
     Construct what the JWPlatform video resource for a SMS media item should look like.
 
@@ -249,6 +270,7 @@ def custom_props_for_item(item):
         'sms_acl': 'acl:{}:'.format(convert_acl(item.visibility, item.acl)),
         'sms_screencast': 'screencast:{}:'.format(item.screencast),
         'sms_image_id': 'image_id:{}:'.format(item.image_id),
+        'sms_image_md5': 'image_md5:{}:'.format(item.image_md5),
         # dspace_path - migration not required
         'sms_featured': 'featured:{}:'.format(item.featured),
         'sms_branding': 'branding:{}:'.format(item.branding),
@@ -308,7 +330,7 @@ def url(opts, item):
 
 def image_url(opts, item):
     """Return the URL for an image_id."""
-    return urllib.parse.urljoin(opts['--base-image-url'], str(item.image_id)+".jpg")
+    return urllib.parse.urljoin(opts['--base-image-url'], str(item.image_id))
 
 
 def sanitise(s, max_length=4096):

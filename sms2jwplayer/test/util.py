@@ -8,10 +8,11 @@ class JWPlatformTestCase(unittest.TestCase):
 
     """
     def setUp(self):
-        self.jwclient_patcher = mock.patch('jwplatform.Client')
-        self.client_callable = self.jwclient_patcher.start()
+        client_callable = self.patch_and_start('jwplatform.Client')
         self.client = mock.MagicMock()
-        self.client_callable.return_value = self.client
+        client_callable.return_value = self.client
 
-    def tearDown(self):
-        self.jwclient_patcher.stop()
+    def patch_and_start(self, *args, **kwargs):
+        patcher = mock.patch(*args, **kwargs)
+        self.addCleanup(patcher.stop)
+        return patcher.start()
