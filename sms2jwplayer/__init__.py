@@ -3,7 +3,7 @@ Tool to support bulk import of University of Cambridge SMS into JWPlayer.
 
 Usage:
     sms2jwplayer (-h | --help)
-    sms2jwplayer fetch [--verbose] [--base-name=NAME]
+    sms2jwplayer fetch [--verbose] [--base-name=NAME] [<type>]
     sms2jwplayer genupdatejob [--verbose] [--strip-leading=N]
         [--output=FILE] --base=URL --base-image-url=URL <csv> <metadata>...
     sms2jwplayer applyupdatejob [--verbose] [--log-file=FILE] [<update>]
@@ -22,6 +22,9 @@ Options:
 
     <date>              Date in YYYY-MM-DD format.
 
+    <type>              Type of list to retrieve - can be either 'videos' or 'channels'
+                        [default: videos]
+
     --output=FILE       Output file. If omitted, use stdout.
 
     --base=URL          Base URL to use for links in MRSS feed.
@@ -38,7 +41,7 @@ Options:
 
 Sub commands:
 
-    fetch               Fetch details on all videos in jwplayer.
+    fetch               Fetch details on either all videos or all channels in jwplayer.
     genupdatejob        Generate list of missing metadata for each video key.
     applyupdatejob      Use JWPlatform API to update videos based on a job description file.
     analytics           Generate SMS analytics for a given day.
