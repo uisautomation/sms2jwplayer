@@ -189,3 +189,8 @@ def upload_thumbnail_from_url(video_key, image_url, delay=None, client=None):
     files = {'file': urllib.request.urlopen(image_url)}
 
     return requests.post(url, params=response['link']['query'], files=files).json()
+
+
+def get_data_type(opts):
+    """Gets the type of JWPlayer data ('videos' or 'channels') from the CL options"""
+    return next(md_type for md_type in ('videos', 'channels') if opts.get(md_type, False))

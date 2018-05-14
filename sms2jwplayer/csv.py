@@ -9,6 +9,24 @@ import enum
 import dateutil.parser
 
 
+CollectionItem = collections.namedtuple('CollectionItem', (
+    'collection_id', 'title', 'description',
+    'website_url', 'creator', 'instid',
+    'groupid', 'image_id', 'acl',
+    'created', 'last_updated', 'updated_by'
+))
+
+CollectionItem.__doc__ = """FIXME"""
+
+# Callables which massage strings into the right types for each column
+CollectionItem._ITEM_TYPES = [
+    int, str, str,
+    str, str, str,
+    str, lambda i: int(i) if i != '' else None, lambda acl: acl.split(','),
+    dateutil.parser.parse, dateutil.parser.parse, str
+]
+
+
 class MediaFormat(enum.Enum):
     VIDEO = 'archive-h264'
     AUDIO = 'audio'
@@ -126,7 +144,7 @@ same but prefixed by "`sms_`".
 """
 
 # Callables which massage strings into the right types for each column
-_MEDIA_ITEM_TYPES = [
+MediaItem._ITEM_TYPES = [
     int, int, MediaFormat, str, dateutil.parser.parse,
     str, str, int, str, str,
     str, lambda b: b == 't', str, str, str, str, str,
@@ -136,15 +154,13 @@ _MEDIA_ITEM_TYPES = [
 ]
 
 
-def load(fobj, skip_header_row=True):
-    """Load an SMS export from a file object. Return a list of
-    :py:class:`.MediaItem` instances. If *skip_header_row* is ``True``, the
-    first line of the CSV file is ignored.
+def load(item_type, fobj, skip_header_row=True):
+    """Load an SMS export from a file object. Return a list of item_type instances.
+    If *skip_header_row* is ``True``, the first line of the CSV file is ignored.
 
-    The CSV file must be in the format described in :any:`csvexport`. Any extra
-    columns are ignored. The ``media_id`` and ``clip_id`` columns are converted
-    to integers and the ``created_at`` column is parsed into a
-    :py:class:`datetime.datetime` instance.
+    The CSV file must be in the format described in :any:`csvexport`.
+    Any extra columns are ignored.
+    The columns are converted by the type defined in item_type._ITEM_TYPES.
 
     """
     reader = csv.reader(fobj)
@@ -154,6 +170,6 @@ def load(fobj, skip_header_row=True):
         next(reader)
 
     return [
-        MediaItem._make([t(v) for t, v in zip(_MEDIA_ITEM_TYPES, row)])
+        item_type._make([t(v) for t, v in zip(item_type._ITEM_TYPES, row)])
         for row in reader
     ]

@@ -10,50 +10,134 @@ import re
 import urllib.parse
 import dateutil.parser
 
+from sms2jwplayer.csv import MediaItem, CollectionItem
 from sms2jwplayer.institutions import INSTIDS
 from . import csv as smscsv
-from .util import output_stream, get_key_path, parse_custom_prop
-
+from .util import output_stream, get_key_path, parse_custom_prop, get_data_type
 
 LOG = logging.getLogger(__name__)
 
+ITEM_TYPES = {'videos': MediaItem, 'channels': CollectionItem}
+
 
 def main(opts):
-    videos = []
+
+    data_type = get_data_type(opts)
+
+    metadata = []
     for metadata_fn in opts['<metadata>']:
         with open(metadata_fn) as f:
-            videos.extend(json.load(f).get('videos', []))
-    LOG.info('Loaded metadata for %s videos', len(videos))
+            metadata.extend(json.load(f).get(data_type, []))
+    LOG.info('Loaded metadata for %s %s', len(metadata), data_type)
 
-    # Load items keyed by stripped path
-    strip_from = int(opts['--strip-leading'])
-    LOG.info('Stripping leading %s component(s) from filename', strip_from)
     with open(opts['<csv>']) as f:
-        items = dict(
-            ('/'.join(item.filename.strip('/').split('/')[strip_from:]), item)
-            for item in smscsv.load(f)
-        )
-    LOG.info('Loaded %s media item(s) from export', len(items))
+        items = smscsv.load(ITEM_TYPES[data_type], f)
+    LOG.info('Loaded %s %s item(s) from export', len(items), ITEM_TYPES[data_type].__name__)
 
     with output_stream(opts) as fobj:
-        process_videos(opts, fobj, items, videos)
+        globals()['process_' + data_type](opts, fobj, items, metadata)
 
 
-def process_videos(opts, fobj, items, videos):
+def process_channels(_, fobj, items, channels):
     """
-    Process video metadata records with reference to a dictionary of media items keyed by the
-    stripped path. Write results to file as JSON document.
+    Process channel metadata records with reference to a list of collection items.
+    Write results to file as JSON document.
 
     """
     # Statistics we record
     n_skipped = 0
 
-    # The list of create, update and delete jobs which need to be performed.
+    # The list of create and update jobs which need to be performed.
     creates, updates = [], []
 
-    # A set of item media_ids which could not be matched to a corresponding JWPlatform video. This
-    # starts full of all items but items are removed as matching happens.
-    new_media_ids = set([item.media_id for item in items.values()])
+    # A list of JWPlatform channel resources which could not be matched to an SMS collection object
+    # and hence should be deleted.
+    unmatched_channels = []
+
+    # A list of (collection, channel resource) tuples representing that a given SMS collection item
+    # is represented by a JWPlatform channel resource.
+    associations = []
+
+    # A dictionary which allows retrieving collection items by collection id.
+    items_by_collection_id = dict((item.collection_id, item) for item in items)
+
+    # A set of item new_collection_ids which could not be matched to a corresponding JWPlatform
+    # channel. This starts full of all items but collections are removed as matching happens.
+    new_collection_ids = set(items_by_collection_id.keys())
+
+    # Match jwplayer videos to SMS items
+    for channel in channels:
+        # Find an existing SMS collection id
+        collection_id_prop = get_key_path(channel, 'custom.sms_collection_id')
+        if collection_id_prop is None:
+            n_skipped += 1
+            continue
+
+        # Retrieve the matching SMS collection item (or record the inability to do so)
+        try:
+            item = items_by_collection_id[int(parse_custom_prop('collection', collection_id_prop))]
+        except KeyError:
+            unmatched_channels.append(channel)
+            continue
+
+        # Remove matched item from new_items set
+        new_collection_ids -= {item.media_id}
+
+        # We now have a match between a channel and SMS collection item. Record the match.
+        associations.append((item, channel))
+
+    # Generate updates for existing channels
+    for item, channel in associations:
+        expected_channel = make_resource(item, custom_props_for_channel(item))
+
+        # Calculate delta from resource which exists to expected resource
+        delta = updated_keys(channel, expected_channel)
+        if len(delta) > 0:
+            # The delta is non-empty, so construct an update request. FSR, the *update* request for
+            # JWPlatform requires the channel be specified via 'channel_key' but said key appears
+            # in the channel resource returned by /channels/list as 'key'. FIXME?
+            update = {'channel_key': channel['key']}
+            update.update(delta)
+            updates.append({
+                'type': 'channels',
+                'resource': update,
+            })
+
+    # Generate creates for new channels
+    for item in (items_by_collection_id[collection_id] for collection_id in new_collection_ids):
+        creates.append({
+            'type': 'channels',
+            'resource': make_resource(item, custom_props_for_channel(item)),
+        })
+
+    LOG.info('Number of JWPlatform channels matched to SMS collection items: %s',
+             len(associations))
+    LOG.info('Number of SMS collection items with no existing channel: %s',
+             len(new_collection_ids))
+    LOG.info('Number of managed JWPlatform channels not matched to SMS collection items: %s',
+             len(unmatched_channels))
+    LOG.info('Number of JWPlatform channels not managed by sms2jwplayer: %s', n_skipped)
+    LOG.info('Number of channel creations: %s', len(creates))
+    LOG.info('Number of channel updates: %s', len(updates))
+
+    json.dump({'create': creates, 'update': updates}, fobj)
+
+
+def process_videos(opts, fobj, items, videos):
+    """
+    Process video metadata records with reference to a list of media items.
+    Write results to file as JSON document.
+
+    """
+    # Load items keyed by stripped path
+    strip_from = int(opts['--strip-leading'])
+    LOG.info('Stripping leading %s component(s) from filename', strip_from)
+
+    # Statistics we record
+    n_skipped = 0
+
+    # The list of create and update jobs which need to be performed.
+    creates, updates = [], []
 
     # A set of clip ids which already exist in JWPlatform
     existing_clip_ids = set()
@@ -67,15 +151,19 @@ def process_videos(opts, fobj, items, videos):
     # media item may have more than one JWPlatform video resource associated with it.
     associations = []
 
-    # A dictionary which allows retrieving media items by clip id. Stores an (item, path) tuple.
-    items_by_clip_id = dict((item.clip_id, (item, path)) for path, item in items.items())
+    # A dictionary which allows retrieving media items by clip id.
+    items_by_clip_id = dict((item.clip_id, item) for item in items)
 
     # A dictionary, keyed by media id, of sequences of items associated with that media
     items_by_media_id = {}
-    for _, item in items.items():
+    for item in items:
         media_items = items_by_media_id.get(item.media_id, list())
         media_items.append(item)
         items_by_media_id[item.media_id] = media_items
+
+    # A set of item media_ids which could not be matched to a corresponding JWPlatform video. This
+    # starts full of all items but items are removed as matching happens.
+    new_media_ids = set(items_by_media_id.keys())
 
     # Match jwplayer videos to SMS items
     for video in videos:
@@ -87,7 +175,7 @@ def process_videos(opts, fobj, items, videos):
 
         # Retrieve the matching SMS media item (or record the inability to do so)
         try:
-            item, _ = items_by_clip_id[int(parse_custom_prop('clip', clip_id_prop))]
+            item = items_by_clip_id[int(parse_custom_prop('clip', clip_id_prop))]
         except KeyError:
             unmatched_videos.append(video)
             continue
@@ -101,7 +189,7 @@ def process_videos(opts, fobj, items, videos):
 
     # Generate updates for existing videos
     for item, video in associations:
-        expected_video = video_resource(item)
+        expected_video = make_resource(item, custom_props_for_video(item))
 
         # Calculate delta from resource which exists to expected resource
         delta = updated_keys(video, expected_video)
@@ -164,7 +252,7 @@ def process_videos(opts, fobj, items, videos):
 
         create_clip_ids.add(item.clip_id)
 
-        video = video_resource(item)
+        video = make_resource(item, custom_props_for_video(item))
         video.update({
             'download_url': url(opts, item),
         })
@@ -175,9 +263,9 @@ def process_videos(opts, fobj, items, videos):
 
     LOG.info('Number of JWPlatform videos matched to SMS media items: %s', len(associations))
     LOG.info('Number of SMS media items with no existing video: %s', len(new_media_ids))
-    LOG.info('Number of JWPlatform videos not matched to SMS media items: %s',
+    LOG.info('Number of managed JWPlatform videos not matched to SMS media items: %s',
              len(unmatched_videos))
-    LOG.info('Number of JWPlatform videos with no import URL: %s', n_skipped)
+    LOG.info('Number of JWPlatform videos not managed by sms2jwplayer: %s', n_skipped)
     LOG.info('Number of video creations: %s', len(creates))
     LOG.info('Number of video updates: %s', len(updates))
 
@@ -212,14 +300,11 @@ def updated_keys(source, target):
     return delta
 
 
-def video_resource(item):
+def make_resource(item, custom_props):
     """
     Construct what the JWPlatform video resource for a SMS media item should look like.
 
     """
-    # Custom props
-    custom_props = custom_props_for_item(item)
-
     # Start making the video resource
     resource = {
         "custom": custom_props,
@@ -240,7 +325,32 @@ def video_resource(item):
     return resource
 
 
-def custom_props_for_item(item):
+def custom_props_for_channel(item):
+    """
+    Return a dictionary of custom props which should be set on a particular channel item.
+
+    """
+    # form list of expected custom properties. We cuddle the id numbers in <type>:...: so that
+    # we can search for "exactly" the collection id rather than simply a video whose id
+    # contains another. (E.g. searching for collection "10" is likely to being up "210", "310",
+    # "1045", etc.)
+    return {
+        'sms_collection_id': 'collection:{}:'.format(item.collection_id),
+        # title - migrated as media item title
+        # description - migrated as media item description
+        'sms_website_url': 'website_url:{}:'.format(item.website_url),
+        'sms_created_by': 'created_by:{}:'.format(item.creator),
+        'sms_instid': 'instid:{}:'.format(item.instid),
+        'sms_groupid': 'groupid:{}:'.format(item.groupid),
+        'sms_image_id': 'image:{}:'.format(item.image_id),
+        'sms_acl': 'acl:{}:'.format(item.acl),
+        'sms_created_at': 'created_at:{}:'.format(item.created.isoformat()),
+        'sms_last_updated_at': 'last_updated_at:{}:'.format(item.last_updated),
+        'sms_updated_by': 'updated_by:{}:'.format(item.updated_by),
+    }
+
+
+def custom_props_for_video(item):
     """
     Return a dictionary of custom props which should be set on a particular video item.
 
@@ -269,11 +379,13 @@ def custom_props_for_item(item):
         # visibility - migration merged with sms_acl
         'sms_acl': 'acl:{}:'.format(convert_acl(item.visibility, item.acl)),
         'sms_screencast': 'screencast:{}:'.format(item.screencast),
+        # FIXME
         'sms_image_id': 'image_id:{}:'.format(item.image_id),
         'sms_image_md5': 'image_md5:{}:'.format(item.image_md5),
         # dspace_path - migration not required
         'sms_featured': 'featured:{}:'.format(item.featured),
         'sms_branding': 'branding:{}:'.format(item.branding),
+        # FIXME
         'sms_last_updated_at': 'last_updated_at:{}:'.format(item.last_updated_at),
         'sms_updated_by': 'updated_by:{}:'.format(item.updated_by),
         'sms_downloadable': 'downloadable:{}:'.format(item.downloadable),

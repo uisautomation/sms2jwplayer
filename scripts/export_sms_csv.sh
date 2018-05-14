@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Output SMS feed URL directly from SMS database.
+# Output SMS media data directly from SMS database.
 #
 # Usage:
-#   export_sms_feed.sh <sms-host> [<csv>]
+#   export_sms_csv.sh <sms-host> [<csv>]
 #
 # Options:
 #
@@ -19,7 +19,7 @@ HOST=$1
 CSV=$2
 
 if [ -z "${HOST}" ]; then
-    echo "usage: export_sms_feed <sms-host> [<csv>]" >&2
+    echo "usage: export_sms_csv.sh <sms-host> [<csv>]" >&2
     exit 1
 fi
 
@@ -47,7 +47,7 @@ COPY (
         m.title AS title,
         m.description AS description,
         m.collection_id AS collection_id,
-        sms_collection.instid AS instid,
+        sms_collection.instid AS instid, # FIXME
         m.aspect_ratio AS aspect_ratio,
         m.creator AS creator,
         m.dspace AS in_dspace,
@@ -58,7 +58,7 @@ COPY (
         m.visibility AS visibility,
         m.acl AS acl,
         m.screencast AS screencast,
-        coalesce(m.image_id, sms_collection.image_id) AS image_id,
+        coalesce(m.image_id, sms_collection.image_id) AS image_id, # FIXME
         md5(i.data) AS image_md5,
         m.dspace_path AS dspace_path,
         m.featured AS featured,

@@ -64,7 +64,7 @@ class FetchTests(JWPlatformTestCase):
 
 def fetch(*args):
     """Call the fetch command as if from command line."""
-    argv = ['sms2jwplayer', 'fetch']
+    argv = ['sms2jwplayer', 'fetch', 'videos']
     argv.extend(args)
     LOG.info('calling with argv: %r', argv)
     with mock.patch('sys.argv', argv):

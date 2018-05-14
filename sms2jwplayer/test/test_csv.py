@@ -2,6 +2,7 @@ import datetime
 from unittest import TestCase
 
 from sms2jwplayer import csv as smscsv
+from sms2jwplayer.csv import MediaItem
 
 from sms2jwplayer.test.io import open_data
 
@@ -9,7 +10,7 @@ from sms2jwplayer.test.io import open_data
 class CSVLoadingTestCase(TestCase):
     def setUp(self):
         with open_data('export_example.csv') as f:
-            self.items = smscsv.load(f)
+            self.items = smscsv.load(MediaItem, f)
 
     def test_item_count(self):
         """The correct number of items were loaded."""

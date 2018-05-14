@@ -7,8 +7,7 @@ import json
 import logging
 import sys
 
-from .util import get_jwplatform_client, JWPlatformClientError
-
+from .util import get_jwplatform_client, JWPlatformClientError, get_data_type
 
 LOG = logging.getLogger(__name__)
 
@@ -21,13 +20,13 @@ def main(opts):
         sys.exit(1)
 
     current_offset = 0
-    type = opts['<type>']
+    data_type = get_data_type(opts)
     while True:
-        LOG.info('Fetching %s starting from offset: %s', type, current_offset)
-        results = getattr(client, type).list(
+        LOG.info('Fetching %s starting from offset: %s', data_type, current_offset)
+        results = getattr(client, data_type).list(
             result_offset=current_offset, result_limit=1000)
-        num_results = len(results[type])
-        LOG.info('Got information on %s %s', num_results, type)
+        num_results = len(results[data_type])
+        LOG.info('Got information on %s %s', num_results, data_type)
 
         # Stop when we get no results
         if num_results == 0:
