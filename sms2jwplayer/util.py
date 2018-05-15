@@ -15,6 +15,8 @@ import jwplatform
 import requests
 import time
 
+from sms2jwplayer.csv import MediaItem, CollectionItem
+
 LOG = logging.getLogger(__name__)
 
 #: regex for parsing a custom prop field
@@ -239,6 +241,18 @@ def upload_thumbnail_from_url(video_key, image_url, delay=None, client=None):
     return requests.post(url, params=response['link']['query'], files=files).json()
 
 
+DATA_TYPE_DICT = {
+    'videos': ('videos', 'videos', MediaItem),
+    'channels': ('channels', 'channels', CollectionItem),
+    'videos_in_channels': ('videos_in_channels', 'channels', CollectionItem)
+}
+
+
 def get_data_type(opts):
-    """Gets the type of JWPlayer data ('videos' or 'channels') from the CL options"""
-    return next(md_type for md_type in ('videos', 'channels') if opts.get(md_type, False))
+    """Gets the type of JWPlayer data ('videos' or 'channels' or 'videos_in_channels')
+    from the CL options"""
+    return next(
+        DATA_TYPE_DICT[data_type]
+        for data_type in ('videos', 'channels', 'videos_in_channels')
+        if opts.get(data_type, False)
+    )

@@ -10,19 +10,16 @@ import re
 import urllib.parse
 import dateutil.parser
 
-from sms2jwplayer.csv import MediaItem, CollectionItem
 from sms2jwplayer.institutions import INSTIDS
 from . import csv as smscsv
 from .util import output_stream, get_key_path, parse_custom_prop, get_data_type
 
 LOG = logging.getLogger(__name__)
 
-ITEM_TYPES = {'videos': MediaItem, 'channels': CollectionItem}
-
 
 def main(opts):
 
-    data_type = get_data_type(opts)
+    sub_cmd, data_type, item_type = get_data_type(opts)
 
     metadata = []
     for metadata_fn in opts['<metadata>']:
@@ -31,11 +28,11 @@ def main(opts):
     LOG.info('Loaded metadata for %s %s', len(metadata), data_type)
 
     with open(opts['<csv>']) as f:
-        items = smscsv.load(ITEM_TYPES[data_type], f)
-    LOG.info('Loaded %s %s item(s) from export', len(items), ITEM_TYPES[data_type].__name__)
+        items = smscsv.load(item_type, f)
+    LOG.info('Loaded %s %s item(s) from export', len(items), item_type.__name__)
 
     with output_stream(opts) as fobj:
-        globals()['process_' + data_type](opts, fobj, items, metadata)
+        globals()['process_' + sub_cmd](opts, fobj, items, metadata)
 
 
 def process_channels(_, fobj, items, channels):
@@ -109,6 +106,96 @@ def process_channels(_, fobj, items, channels):
             'type': 'channels',
             'resource': make_resource_for_channel(item),
         })
+
+    LOG.info('Number of JWPlatform channels matched to SMS collection items: %s',
+             len(associations))
+    LOG.info('Number of SMS collection items with no existing channel: %s',
+             len(new_collection_ids))
+    LOG.info('Number of managed JWPlatform channels not matched to SMS collection items: %s',
+             len(unmatched_channels))
+    LOG.info('Number of JWPlatform channels not managed by sms2jwplayer: %s', n_skipped)
+    LOG.info('Number of channel creations: %s', len(creates))
+    LOG.info('Number of channel updates: %s', len(updates))
+
+    json.dump({'create': creates, 'update': updates}, fobj)
+
+
+def process_videos_in_channels(_, fobj, items, channels):
+    """
+    Process channel metadata records with reference to a list of collection items. Specifically it
+    compares media_ids  property and generates a set of videos_insert/videos_delete jobs. The
+    results are written to file as JSON document.
+
+    """
+    # Statistics we record
+    n_skipped = 0
+
+    # The list of create and update jobs which need to be performed.
+    creates, updates = [], []
+
+    # A list of JWPlatform channel resources which could not be matched to an SMS collection object
+    # and hence should be deleted.
+    unmatched_channels = []
+
+    # A list of (collection, channel resource) tuples representing that a given SMS collection item
+    # is represented by a JWPlatform channel resource.
+    associations = []
+
+    # A dictionary which allows retrieving collection items by collection id.
+    items_by_collection_id = dict((item.collection_id, item) for item in items)
+
+    # A set of item new_collection_ids which could not be matched to a corresponding JWPlatform
+    # channel. This starts full of all items but collections are removed as matching happens.
+    new_collection_ids = set(items_by_collection_id.keys())
+
+    # Match jwplayer videos to SMS items
+    for channel in channels:
+
+        # Find an existing SMS collection id
+        collection_id_prop = get_key_path(channel, 'custom.sms_collection_id')
+        if collection_id_prop is None:
+            n_skipped += 1
+            continue
+
+        # Retrieve the matching SMS collection item (or record the inability to do so)
+        try:
+            item = items_by_collection_id[int(parse_custom_prop('collection', collection_id_prop))]
+        except KeyError:
+            unmatched_channels.append(channel)
+            continue
+
+        # Remove matched item from new_items set
+        new_collection_ids -= {item.collection_id}
+
+        # We now have a match between a channel and SMS collection item. Record the match.
+        associations.append((item, channel))
+
+    # Generate updates for existing channels
+    for item, channel in associations:
+        print(item.media_ids)
+
+        media_ids = []
+        media_ids_prop = get_key_path(channel, 'custom.sms_media_ids')
+        if media_ids_prop:
+            media_ids = parse_custom_prop('media_ids', media_ids_prop).split(',')
+
+        insert = set(item.media_ids) - set(media_ids)
+        delete = set(media_ids) - set(item.media_ids)
+
+        updates.extend([{
+            'type': 'videos_insert', 'resource': {'media_id': media_id}
+        } for media_id in insert])
+
+        updates.extend([{
+            'type': 'videos_delete', 'resource': {'media_id': media_id}
+        } for media_id in delete])
+
+    # Generate creates for new channels
+    for item in (items_by_collection_id[collection_id] for collection_id in new_collection_ids):
+
+        creates.extend([{
+            'type': 'videos_insert', 'resource': {'media_id': media_id}
+        } for media_id in item.media_ids])
 
     LOG.info('Number of JWPlatform channels matched to SMS collection items: %s',
              len(associations))
@@ -385,7 +472,6 @@ def make_resource_for_channel(item):
             'sms_created_at': 'created_at:{}:'.format(item.created.isoformat()),
             'sms_last_updated_at': 'last_updated_at:{}:'.format(item.last_updated),
             'sms_updated_by': 'updated_by:{}:'.format(item.updated_by),
-            'sms_media_ids': 'media_ids:{}:'.format(item.media_ids),
         },
     }
 

@@ -25,7 +25,7 @@ CollectionItem._ITEM_TYPES = [
     str, str, str,
     str, lambda i: int(i) if i != '' else None, lambda acl: acl.split(','),
     dateutil.parser.parse, dateutil.parser.parse, str,
-    lambda media_ids: media_ids.split(','),
+    lambda media_ids: media_ids.split(',') if media_ids != '' else [],
 ]
 
 

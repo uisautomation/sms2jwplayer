@@ -20,7 +20,7 @@ def main(opts):
         sys.exit(1)
 
     current_offset = 0
-    data_type = get_data_type(opts)
+    _, data_type, _ = get_data_type(opts)
     while True:
         LOG.info('Fetching %s starting from offset: %s', data_type, current_offset)
         results = getattr(client, data_type).list(
