@@ -385,6 +385,7 @@ def make_resource_for_channel(item):
             'sms_created_at': 'created_at:{}:'.format(item.created.isoformat()),
             'sms_last_updated_at': 'last_updated_at:{}:'.format(item.last_updated),
             'sms_updated_by': 'updated_by:{}:'.format(item.updated_by),
+            'sms_media_ids': 'media_ids:{}:'.format(item.media_ids),
         },
     }
 

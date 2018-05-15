@@ -50,11 +50,21 @@ COPY (
         acl,
         created,
         last_updated,
-        updated_by
+        updated_by,
+        (
+            SELECT array_to_string(array_agg(om.id), ',')
+            FROM (
+                SELECT id
+                FROM sms_media m
+                WHERE collection_id = sms_collection.id
+                ORDER BY id
+            ) om
+        ) media_ids
     FROM sms_collection
     ORDER BY id
 ) TO STDOUT DELIMITER ',' CSV HEADER;
 EOL
+# the media_ids must be ordered - hence the additional sub-select
 
 if [ ! -z "$CSV" ]; then
     echo "-- Writing export CSV to ${CSV}"

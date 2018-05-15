@@ -13,7 +13,8 @@ CollectionItem = collections.namedtuple('CollectionItem', (
     'collection_id', 'title', 'description',
     'website_url', 'creator', 'instid',
     'groupid', 'image_id', 'acl',
-    'created', 'last_updated', 'updated_by'
+    'created', 'last_updated', 'updated_by',
+    'media_ids'
 ))
 
 CollectionItem.__doc__ = """FIXME"""
@@ -23,7 +24,8 @@ CollectionItem._ITEM_TYPES = [
     int, str, str,
     str, str, str,
     str, lambda i: int(i) if i != '' else None, lambda acl: acl.split(','),
-    dateutil.parser.parse, dateutil.parser.parse, str
+    dateutil.parser.parse, dateutil.parser.parse, str,
+    lambda media_ids: media_ids.split(','),
 ]
 
 
