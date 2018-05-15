@@ -114,13 +114,13 @@ def parse_custom_prop(expected_type, field):
 
 class VideoNotFoundError(RuntimeError):
     """
-    The provided SMS media ID does not have a corresponding JWPlatform video.
+    The provided SMS media id does not have a corresponding JWPlatform video.
     """
 
 
 def key_for_media_id(media_id, preferred_media_type='video', client=None):
     """
-    :param media_id: the SMS media ID of the required video
+    :param media_id: the SMS media id of the required video
     :type media_id: int
     :param preferred_media_type: (optional) the preferred media type to return. One of ``'video'``
         or ``'audio'``.
@@ -165,12 +165,60 @@ def key_for_media_id(media_id, preferred_media_type='video', client=None):
     return video_resource['key']
 
 
+class ChannelNotFoundError(RuntimeError):
+    """
+    The provided SMS collection id does not have a corresponding JWPlatform channel.
+    """
+
+
+def key_for_collection_id(collection_id, client=None):
+    """
+    :param collection_id: the SMS collection id of the required channel
+    :type collection_id: int
+    :param client: (options) an authenticated JWPlatform client as returned by
+        :py:func:`.get_jwplatform_client`. If ``None``, call :py:func:`.get_jwplatform_client`.
+    :raises: :py:class:`.ChannelNotFoundError` if the collection id does not correspond to a
+        JWPlatform channel.
+
+    """
+    client = client if client is not None else get_jwplatform_client()
+
+    # The value of the sms_media_id custom property we search for
+    collection_id_value = 'collection:{:d}:'.format(collection_id)
+
+    # Search for channels
+    response = client.channels.list(**{
+        'search:custom.sms_collection_id': collection_id_value,
+    })
+
+    # Loop through "videos" to find the preferred one based on mediatype
+    channel_resource = None
+    for channel in response.get('channels', []):
+        # Sanity check: skip channels with wrong collection id since video search is
+        # not "is equal to", it is "contains".
+        if channel.get('custom', {}).get('sms_collection_id') != collection_id_value:
+            continue
+
+        channel_resource = channel
+
+    # If no channel found, raise error
+    if channel_resource is None:
+        raise ChannelNotFoundError()
+
+    # Check the channel we found has a non-None key
+    if channel_resource.get('key') is None:
+        raise ChannelNotFoundError()
+
+    return channel_resource['key']
+
+
 def upload_thumbnail_from_url(video_key, image_url, delay=None, client=None):
     """
     Updates the thumbnail for a particular video object with the image at image_url.
 
     :param video_key: <string> Video's object ID. Can be found within JWPlayer Dashboard.
     :param image_url: The public URL on the image to use as a thumbnail
+    :param delay: delay (in seconds) to apply between API calls
     :param client: (options) an authenticated JWPlatform client as returned by
         :py:func:`.get_jwplatform_client`. If ``None``, call :py:func:`.get_jwplatform_client`.
     """

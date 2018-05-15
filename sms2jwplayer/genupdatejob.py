@@ -81,14 +81,14 @@ def process_channels(_, fobj, items, channels):
             continue
 
         # Remove matched item from new_items set
-        new_collection_ids -= {item.media_id}
+        new_collection_ids -= {item.collection_id}
 
         # We now have a match between a channel and SMS collection item. Record the match.
         associations.append((item, channel))
 
     # Generate updates for existing channels
     for item, channel in associations:
-        expected_channel = make_resource(item, custom_props_for_channel(item))
+        expected_channel = make_resource_for_channel(item)
 
         # Calculate delta from resource which exists to expected resource
         delta = updated_keys(channel, expected_channel)
@@ -107,7 +107,7 @@ def process_channels(_, fobj, items, channels):
     for item in (items_by_collection_id[collection_id] for collection_id in new_collection_ids):
         creates.append({
             'type': 'channels',
-            'resource': make_resource(item, custom_props_for_channel(item)),
+            'resource': make_resource_for_channel(item),
         })
 
     LOG.info('Number of JWPlatform channels matched to SMS collection items: %s',
@@ -189,7 +189,7 @@ def process_videos(opts, fobj, items, videos):
 
     # Generate updates for existing videos
     for item, video in associations:
-        expected_video = make_resource(item, custom_props_for_video(item))
+        expected_video = make_resource_for_video(item)
 
         # Calculate delta from resource which exists to expected resource
         delta = updated_keys(video, expected_video)
@@ -252,7 +252,7 @@ def process_videos(opts, fobj, items, videos):
 
         create_clip_ids.add(item.clip_id)
 
-        video = make_resource(item, custom_props_for_video(item))
+        video = make_resource_for_video(item)
         video.update({
             'download_url': url(opts, item),
         })
@@ -300,66 +300,16 @@ def updated_keys(source, target):
     return delta
 
 
-def make_resource(item, custom_props):
+def make_resource_for_video(item):
     """
     Construct what the JWPlatform video resource for a SMS media item should look like.
 
     """
-    # Start making the video resource
-    resource = {
-        "custom": custom_props,
-    }
 
-    # Add title and description if present
-    for key, value in (('title', item.title), ('description', item.description)):
-        value = sanitise(value)
-        if value.strip() != '':
-            resource[key] = value
-
-    # Add a created at date
-    created_at = custom_props.get('sms_created_at')
-    if created_at is not None:
-        date_str = ':'.join(created_at.split(':')[1:-1])
-        resource['date'] = int(dateutil.parser.parse(date_str).timestamp())
-
-    return resource
-
-
-def custom_props_for_channel(item):
-    """
-    Return a dictionary of custom props which should be set on a particular channel item.
-
-    """
-    # form list of expected custom properties. We cuddle the id numbers in <type>:...: so that
-    # we can search for "exactly" the collection id rather than simply a video whose id
-    # contains another. (E.g. searching for collection "10" is likely to being up "210", "310",
-    # "1045", etc.)
-    return {
-        'sms_collection_id': 'collection:{}:'.format(item.collection_id),
-        # title - migrated as media item title
-        # description - migrated as media item description
-        'sms_website_url': 'website_url:{}:'.format(item.website_url),
-        'sms_created_by': 'created_by:{}:'.format(item.creator),
-        'sms_instid': 'instid:{}:'.format(item.instid),
-        'sms_groupid': 'groupid:{}:'.format(item.groupid),
-        'sms_image_id': 'image:{}:'.format(item.image_id),
-        'sms_acl': 'acl:{}:'.format(item.acl),
-        'sms_created_at': 'created_at:{}:'.format(item.created.isoformat()),
-        'sms_last_updated_at': 'last_updated_at:{}:'.format(item.last_updated),
-        'sms_updated_by': 'updated_by:{}:'.format(item.updated_by),
-    }
-
-
-def custom_props_for_video(item):
-    """
-    Return a dictionary of custom props which should be set on a particular video item.
-
-    """
-    # form list of expected custom properties. We cuddle the id numbers in <type>:...: so that
-    # we can search for "exactly" the media id or clip id rather than simply a video whose id
-    # contains another. (E.g. searching for clip "10" is likely to being up "210", "310",
-    # "1045", etc.)
-    return {
+    # Start making the video resource. We cuddle the id numbers in <type>:...: so that we can
+    # search for "exactly" the media id or clip id rather than simply a video whose id contains
+    # another.
+    custom_props = {
         'sms_media_id': 'media:{}:'.format(item.media_id),
         'sms_clip_id': 'clip:{}:'.format(item.clip_id),
         # format - migration not required
@@ -393,6 +343,58 @@ def custom_props_for_video(item):
         # abstract - migration impractical
         # priority - migration not required
     }
+
+    resource = {
+        "custom": custom_props,
+    }
+
+    # Add title and description if present
+    for key, value in (('title', item.title), ('description', item.description)):
+        value = sanitise(value)
+        if value.strip() != '':
+            resource[key] = value
+
+    # Add a created at date
+    created_at = custom_props.get('sms_created_at')
+    if created_at is not None:
+        date_str = ':'.join(created_at.split(':')[1:-1])
+        resource['date'] = int(dateutil.parser.parse(date_str).timestamp())
+
+    return resource
+
+
+def make_resource_for_channel(item):
+    """
+    Construct what the JWPlatform channel resource for a SMS collection item should look like.
+
+    """
+    # Start making the channel resource. We cuddle the id numbers in <type>:...: so that we can
+    # search for "exactly" the collection id rather than simply a channel whose id contains
+    # another.
+    resource = {
+        "custom": {
+            'sms_collection_id': 'collection:{}:'.format(item.collection_id),
+            # title - migrated as media item title
+            # description - migrated as media item description
+            'sms_website_url': 'website_url:{}:'.format(item.website_url),
+            'sms_created_by': 'created_by:{}:'.format(item.creator),
+            'sms_instid': 'instid:{}:'.format(item.instid),
+            'sms_groupid': 'groupid:{}:'.format(item.groupid),
+            'sms_image_id': 'image:{}:'.format(item.image_id),
+            'sms_acl': 'acl:{}:'.format(item.acl),
+            'sms_created_at': 'created_at:{}:'.format(item.created.isoformat()),
+            'sms_last_updated_at': 'last_updated_at:{}:'.format(item.last_updated),
+            'sms_updated_by': 'updated_by:{}:'.format(item.updated_by),
+        },
+    }
+
+    # Add title and description if present
+    for key, value in (('title', item.title), ('description', item.description)):
+        value = sanitise(value)
+        if value.strip() != '':
+            resource[key] = value
+
+    return resource
 
 
 # A regex pattern for CRSID matching.

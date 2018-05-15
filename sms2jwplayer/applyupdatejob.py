@@ -16,7 +16,7 @@ The Create object specifies a list of JWPlatform resources which should be creat
 .. code:: js
 
     {
-        "type": "videos",
+        "type": "videos|channels",
         "resource: {
             // dictionary of resource properties
         }
@@ -27,7 +27,7 @@ The Update object specifies a list of JWPlatform resources which need to be upda
 .. code:: js
 
     {
-        "type": "videos|image_load|image_load|image_check",
+        "type": "videos|channels|image_load|image_load|image_check",
         "resource": {
             // dictionary of properties to update
         }
@@ -38,7 +38,7 @@ The Delete object specifies a list of JWPlatform resources which need to be dele
 .. code:: js
 
     {
-        "type": "videos",
+        "type": "videos|channels",
         "resource": {
             // dictionary of parameters to delete request
         }
@@ -108,12 +108,12 @@ def main(opts):
             }, f)
 
 
-def create_calls(client, updates):
+def create_calls(client, creates):
     """
     Return an iterator of callables representing the API calls for each create job.
     """
-    for update in updates:
-        type_, resource = update.get('type'), update.get('resource', {})
+    for create in creates:
+        type_, resource = create.get('type'), create.get('resource', {})
 
         if type_ == 'videos':
             params = resource_to_params(resource)
@@ -134,12 +134,14 @@ def create_calls(client, updates):
                     except ValueError:
                         LOG.warning('Skipping video with bad media id prop: %s', media_id_prop)
                     else:
-                        # Attempt to find a matching video for this media id. If None found, that's
-                        # OK.
+                        # Attempt to find a matching video for this media id.
+                        # If None found, that's OK.
                         try:
                             video_key = util.key_for_media_id(media_id)
                         except util.VideoNotFoundError:
                             pass
+                        finally:
+                            time.sleep(delay)
 
                 if video_key is not None:
                     LOG.warning('Updating video %(video_key)s instead of creating new one',
@@ -148,6 +150,50 @@ def create_calls(client, updates):
                         http_method='POST', video_key=video_key, **params)
                 else:
                     return client.videos.create(http_method='POST', **params)
+
+            yield do_create
+
+        elif type_ == 'channels':
+            params = resource_to_params(resource)
+
+            # We wrap the entire create/update process in a function since we make use of two API
+            # calls (one is via key_for_media_id). Hence we want to re-try the entire thing if we
+            # hit the API rate limit.
+            def do_create(delay):
+                # If channel_key is set to anything other than None, an update of that channel key
+                # will be done instead.
+                channel_key = None
+
+                # See if the resource already exists. If so, perform an update instead.
+                collection_id_prop = params.get('custom.sms_collection_id')
+                if collection_id_prop is not None:
+                    try:
+                        collection_id = int(util.parse_custom_prop(
+                            'collection', collection_id_prop
+                        ))
+                    except ValueError:
+                        LOG.warning(
+                            'Skipping video with bad collection id prop: %s', collection_id_prop
+                        )
+                    else:
+                        # Attempt to find a matching channel for this collection id.
+                        # If None found, that's OK.
+                        try:
+                            channel_key = util.key_for_collection_id(collection_id)
+                        except util.ChannelNotFoundError:
+                            pass
+                        finally:
+                            time.sleep(delay)
+
+                if channel_key is not None:
+                    LOG.warning(
+                        'Updating channel %(channel_key)s instead of creating new one',
+                        {'channel_key': channel_key}
+                    )
+                    return client.channels.update(
+                        http_method='POST', channel_key=channel_key, **params)
+                else:
+                    return client.channels.create(type='manual', http_method='POST', **params)
 
             yield do_create
         else:
@@ -200,6 +246,10 @@ def update_calls(client, updates):
             if type_ == 'videos':
                 yield lambda delay: log(
                     client.videos.update(http_method='POST', **resource_to_params(resource))
+                )
+            elif type_ == 'channels':
+                yield lambda delay: log(
+                    client.channels.update(http_method='POST', **resource_to_params(resource))
                 )
             elif type_ == 'image_load':
                 yield image_load
