@@ -17,7 +17,42 @@ CollectionItem = collections.namedtuple('CollectionItem', (
     'media_ids'
 ))
 
-CollectionItem.__doc__ = """FIXME"""
+CollectionItem.__doc__ = """
+Representation of a single collection within the SMS.
+The attributes below are all the columns in the :any:`csvexport`. Unless otherwise stated, the
+attribute is migrated to a custom property in jwplayer and the name of that property will be the
+same but prefixed by "`sms_`".
+
+* ``collection_id`` - Numeric ID for the SMS collection.
+
+* ``title`` - A string giving the title of the collection. This is migrated directly to the title 
+  of the channel in jwplayer and not as a custom property.
+
+* ``description`` - A string giving the description of the collection. This is migrated directly to
+  the description of the channel in jwplayer and not as a custom property.
+
+* ``website_url`` - An optional link to the users website.
+
+* ``creator`` - The media item's creator. The migrated custom property name in sms_created_by.
+
+* ``instid`` - String ID for institution which owns the collection.
+
+* ``groupid - The ID of a lookup group whose members can edit this collection. 
+
+* ``image_id`` - The id of the collection's custom thumbnail - empty if a thumbnail was never
+  uploaded to legacy SMS.
+
+* ``acl`` - An ACL defining the visibility of the collection.
+
+* ``created_at`` - An ISO 8601 formatted date and time indicating when the collection was first
+  created.
+
+* ``last_updated_at`` - When the collection was last updated.
+
+* ``updated_by`` - Who last updated the collection (CRSID).
+
+* ``media_ids`` - A CSV list of the ids all the media items contained by this collection.
+"""
 
 # Callables which massage strings into the right types for each column
 CollectionItem._ITEM_TYPES = [
@@ -47,13 +82,6 @@ Representation of a single media item within the SMS.
 The attributes below are all the columns in the :any:`csvexport`. Unless otherwise stated, the
 attribute is migrated to a custom property in jwplayer and the name of that property will be the
 same but prefixed by "`sms_`".
-
-* ``media_id`` - Numeric ID for the SMS media item. An SMS media item may have multiple clips
-  associated with it which are encoded into various formats. The media item is the fundamental
-  object.
-
-* ``clip_id`` - Numeric ID for the SMS clip item. There may be multiple clips associated with a
-  single media item but they must have a unique format.
 
 * ``media_id`` - Numeric ID for the SMS media item. An SMS media item may have multiple clips
   associated with it which are encoded into various formats. The media item is the fundamental
