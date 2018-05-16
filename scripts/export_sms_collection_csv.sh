@@ -43,13 +43,13 @@ COPY (
         name AS title,
         description,
         website_url,
-        creator,
+        creator AS created_by,
         instid,
         groupid,
         image_id,
         acl,
-        created,
-        last_updated,
+        created AS created_at,
+        last_updated AS last_updated_at,
         updated_by,
         (
             SELECT array_to_string(array_agg(om.id), ',')

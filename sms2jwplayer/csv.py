@@ -11,9 +11,9 @@ import dateutil.parser
 
 CollectionItem = collections.namedtuple('CollectionItem', (
     'collection_id', 'title', 'description',
-    'website_url', 'creator', 'instid',
+    'website_url', 'created_by', 'instid',
     'groupid', 'image_id', 'acl',
-    'created', 'last_updated', 'updated_by',
+    'created_at', 'last_updated_at', 'updated_by',
     'media_ids'
 ))
 
@@ -33,7 +33,7 @@ same but prefixed by "`sms_`".
 
 * ``website_url`` - An optional link to the users website.
 
-* ``creator`` - The media item's creator. The migrated custom property name in sms_created_by.
+* ``created_by`` - The media item's creator.
 
 * ``instid`` - String ID for institution which owns the collection.
 

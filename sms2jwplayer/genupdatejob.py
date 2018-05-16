@@ -438,13 +438,15 @@ def make_resource_for_channel(collection):
         "custom": {
             'sms_collection_id': 'collection:{}:'.format(collection.collection_id),
             'sms_website_url': 'website_url:{}:'.format(collection.website_url),
-            'sms_created_by': 'created_by:{}:'.format(collection.creator),
+            'sms_created_by': 'created_by:{}:'.format(collection.created_by),
             'sms_instid': 'instid:{}:'.format(collection.instid),
             'sms_groupid': 'groupid:{}:'.format(collection.groupid),
             'sms_image_id': 'image:{}:'.format(collection.image_id),
             'sms_acl': 'acl:{}:'.format(collection.acl),
-            'sms_created_at': 'created_at:{}:'.format(collection.created.isoformat()),
-            'sms_last_updated_at': 'last_updated_at:{}:'.format(collection.last_updated),
+            'sms_created_at': 'created_at:{}:'.format(collection.created_at.isoformat()),
+            'sms_last_updated_at': 'last_updated_at:{}:'.format(
+                collection.last_updated_at.isoformat()
+            ),
             'sms_updated_by': 'updated_by:{}:'.format(collection.updated_by),
         },
     }
