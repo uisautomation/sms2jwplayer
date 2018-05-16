@@ -62,10 +62,10 @@ LOG = logging.getLogger('applyupdatejob')
 MAX_ATTEMPTS = 20
 
 #: Maximum delay between each API call
-MAX_DELAY = 3.0
+MAX_DELAY = 2.0
 
 #: Minimum delay between each API call
-MIN_DELAY = 0.05
+MIN_DELAY = 0.02
 
 
 def main(opts):
@@ -116,9 +116,11 @@ def videos_insert(client, delay, resource):
     state of the channel."""
     try:
         video_key = util.key_for_media_id(resource['media_id'])
+        time.sleep(delay)
     except util.VideoNotFoundError:
         return 'video not found for media_id: {}'.format(resource['media_id'])
     channel = util.channel_for_collection_id(resource['collection_id'], client)
+    time.sleep(delay)
     if not channel:
         return 'channel not found for collection_id: {}'.format(resource['collection_id'])
     media_ids = get_media_ids_from_channel(channel)
@@ -138,9 +140,11 @@ def videos_delete(client, delay, resource):
     state of the channel."""
     try:
         video_key = util.key_for_media_id(resource['media_id'])
+        time.sleep(delay)
     except util.VideoNotFoundError:
         return 'video not found for media_id: ' + resource['media_id']
     channel = util.channel_for_collection_id(resource['collection_id'], client)
+    time.sleep(delay)
     if not channel:
         return 'channel not found for collection_id: ' + resource['collection_id']
     media_ids = get_media_ids_from_channel(channel)
@@ -160,7 +164,7 @@ def get_media_ids_from_channel(channel):
     default = {'sms_media_ids': 'media_ids::'}
     media_ids_prop = channel.get('custom', default).get('sms_media_ids', default['sms_media_ids'])
     media_ids = util.parse_custom_prop('media_ids', media_ids_prop)
-    return set([] if media_ids == '' else int(media_id) for media_id in media_ids.split(','))
+    return set([] if media_ids == '' else [int(media_id) for media_id in media_ids.split(',')])
 
 
 def update_media_ids(client, channel_key, media_ids):
@@ -364,7 +368,7 @@ def execute_api_calls_respecting_rate_limit(call_iterable):
 
     """
     # delay between calls to not hit rate limit
-    delay = 0.1  # seconds
+    delay = MIN_DELAY  # seconds
 
     for api_call in call_iterable:
         error_message = None
@@ -373,12 +377,12 @@ def execute_api_calls_respecting_rate_limit(call_iterable):
                 yield api_call(delay)
 
                 # On a successful call, slightly shorten the delay
-                delay = max(MIN_DELAY, min(MAX_DELAY, delay * 0.8))
+                delay = max(MIN_DELAY, min(MAX_DELAY, delay * 0.2))
                 time.sleep(delay)
                 break
             except JWPlatformRateLimitExceededError as error:
                 # On a rate limit failure, lengthen the delay
-                delay = max(MIN_DELAY, min(MAX_DELAY, 2. * delay))
+                delay = max(MIN_DELAY, min(MAX_DELAY, delay * 8.0))
                 time.sleep(delay)
                 error_message = error.message
         if error_message:

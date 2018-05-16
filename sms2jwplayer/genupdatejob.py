@@ -181,6 +181,8 @@ def process_videos_in_channels(_, fobj, collections, channels):
         if delete:
             updates.extend(make_videos_in_channels_jobs(collection, 'videos_delete', delete))
 
+        return updates
+
     generic_channels_processor(fobj, collections, channels, create, update)
 
 
