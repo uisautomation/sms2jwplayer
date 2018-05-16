@@ -40,7 +40,7 @@ msg "-- Generating SMS export CSV"
 COPY (
     SELECT
         id AS collection_id,
-        name as title,
+        name AS title,
         description,
         website_url,
         creator,

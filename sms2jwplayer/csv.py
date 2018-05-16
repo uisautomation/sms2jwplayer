@@ -113,9 +113,6 @@ same but prefixed by "`sms_`".
 
 * ``creator`` - The media item's creator. The migrated custom property name in sms_created_at.
 
-* ``in_dspace`` - Whether or not the media iten was archived in DSpace. This isn't migrated as it
-  is irrelevant in the context of jwplayer.
-
 * ``publisher`` - The publisher of the media item.
 
 * ``copyright`` - The copyright of the media item.
@@ -151,9 +148,6 @@ same but prefixed by "`sms_`".
 * ``image_md5`` - The md5 of the media item's custom thumbnail - empty if a thumbnail was never
   uploaded to legacy SMS.
 
-* ``dspace_path`` - The path of the media item archived in DSpace. This isn't migrated as it is
-  irrelevant in the context of jwplayer.
-
 * ``featured`` - Whether or not the media item is featured on the frontpage.
 
 * ``branding`` - No definition available.
@@ -165,12 +159,6 @@ same but prefixed by "`sms_`".
 * ``downloadable`` - Whether or not the media item can be downloaded from it's page.
 
 * ``withdrawn`` - No definition available.
-
-* ``abstract`` - A longer description of the media item. This isn't migrated as it's size makes
-  this impractical.
-
-* ``priority`` - A numeric priority (lowest = 0) that indicates how urgently a media item needs to
-  be transcoded. This isn't migrated as it is irrelevant in the context of jwplayer.
 """
 
 # Callables which massage strings into the right types for each column

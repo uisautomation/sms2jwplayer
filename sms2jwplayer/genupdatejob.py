@@ -381,8 +381,8 @@ def make_resource_for_video(item):
     custom_props = {
         'sms_media_id': 'media:{}:'.format(item.media_id),
         'sms_clip_id': 'clip:{}:'.format(item.clip_id),
-        # format - migration not required
-        # filename - migration not required
+        # format - migration not required (used to determine which clip to use)
+        # filename - migration not required (used to determine the download URL)
         'sms_created_at': 'created_at:{}:'.format(item.created_at.isoformat()),
         # title - migrated as media item title
         # description - migrated as media item description
@@ -390,7 +390,6 @@ def make_resource_for_video(item):
         'sms_instid': 'instid:{}:'.format(item.instid),
         'sms_aspect_ratio': 'aspect_ratio:{}:'.format(item.aspect_ratio),
         'sms_created_by': 'created_by:{}:'.format(item.creator),
-        # in_dspace - migration not required
         'sms_publisher': 'publisher:{}:'.format(item.publisher),
         'sms_copyright': 'copyright:{}:'.format(item.copyright),
         'sms_language': 'language:{}:'.format(item.language),
@@ -400,15 +399,12 @@ def make_resource_for_video(item):
         'sms_screencast': 'screencast:{}:'.format(item.screencast),
         'sms_image_id': 'image_id:{}:'.format(item.image_id),
         'sms_image_md5': 'image_md5:{}:'.format(item.image_md5),
-        # dspace_path - migration not required
         'sms_featured': 'featured:{}:'.format(item.featured),
         'sms_branding': 'branding:{}:'.format(item.branding),
         'sms_last_updated_at': 'last_updated_at:{}:'.format(item.last_updated_at),
         'sms_updated_by': 'updated_by:{}:'.format(item.updated_by),
         'sms_downloadable': 'downloadable:{}:'.format(item.downloadable),
         'sms_withdrawn': 'withdrawn:{}:'.format(item.withdrawn),
-        # abstract - migration impractical
-        # priority - migration not required
     }
 
     resource = {
