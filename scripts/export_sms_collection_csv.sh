@@ -54,10 +54,15 @@ COPY (
         (
             SELECT array_to_string(array_agg(om.id), ',')
             FROM (
-                SELECT id
+                SELECT m.id
                 FROM sms_media m
+                JOIN sms_clip c ON c.media_id = m.id
                 WHERE collection_id = sms_collection.id
-                ORDER BY id
+                AND ( c.format = 'archive-h264' OR c.format = 'audio' )
+                AND c.quality = 'high'
+                AND c.filename IS NOT NULL
+                GROUP BY m.id
+                ORDER BY m.id
             ) om
         ) media_ids
     FROM sms_collection
@@ -65,6 +70,7 @@ COPY (
 ) TO STDOUT DELIMITER ',' CSV HEADER;
 EOL
 # the media_ids must be ordered - hence the additional sub-select
+# TODO the order in sms_collection_imported_media s/b used when available
 
 if [ ! -z "$CSV" ]; then
     echo "-- Writing export CSV to ${CSV}"

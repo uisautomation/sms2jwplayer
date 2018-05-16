@@ -108,12 +108,76 @@ def main(opts):
             }, f)
 
 
+def videos_insert(client, delay, resource):
+    """Inserts a video into a channel and updates the custom sms_media_ids param to reflect the new
+    state of the channel."""
+    try:
+        video_key = util.key_for_media_id(resource['media_id'])
+    except util.VideoNotFoundError:
+        return 'video not found for media_id: {}'.format(resource['media_id'])
+    channel = util.channel_for_collection_id(resource['collection_id'], client)
+    if not channel:
+        return 'channel not found for collection_id: {}'.format(resource['collection_id'])
+    media_ids = get_media_ids_from_channel(channel)
+    if resource['media_id'] in media_ids:
+        # we do this in-case the job is accidentally run twice
+        return 'video {} already in channel {}'.format(video_key, channel['key'])
+    media_ids.add(resource['media_id'])
+    response = client.channels.videos.create(channel_key=channel['key'], video_key=video_key)
+    if response['status'] == 'ok':
+        time.sleep(delay)
+        return {'insert': response, 'update': update_media_ids(client, channel['key'], media_ids)}
+    return response
+
+
+def videos_delete(client, delay, resource):
+    """Deletes a video from a channel and updates the custom sms_media_ids param to reflect the new
+    state of the channel."""
+    try:
+        video_key = util.key_for_media_id(resource['media_id'])
+    except util.VideoNotFoundError:
+        return 'video not found for media_id: ' + resource['media_id']
+    channel = util.channel_for_collection_id(resource['collection_id'], client)
+    if not channel:
+        return 'channel not found for collection_id: ' + resource['collection_id']
+    media_ids = get_media_ids_from_channel(channel)
+    if resource['media_id'] not in media_ids:
+        # we do this in-case the job is accidentally run twice
+        return 'video {} not in channel {}'.format(video_key, channel['key'])
+    media_ids.remove(resource['media_id'])
+    response = client.channels.videos.delete(channel_key=channel['key'], video_key=video_key)
+    if response['status'] == 'ok':
+        time.sleep(delay)
+        return {'delete': response, 'update': update_media_ids(client, channel['key'], media_ids)}
+    return response
+
+
+def get_media_ids_from_channel(channel):
+    """Retrieves the custom sms_media_ids param from a channel.."""
+    default = {'sms_media_ids': 'media_ids::'}
+    media_ids_prop = channel.get('custom', default).get('sms_media_ids', default['sms_media_ids'])
+    media_ids = util.parse_custom_prop('media_ids', media_ids_prop)
+    return set([] if media_ids == '' else int(media_id) for media_id in media_ids.split(','))
+
+
+def update_media_ids(client, channel_key, media_ids):
+    """Updates a channel with a new custom sms_media_ids param."""
+    media_ids_string = ','.join(str(media_id) for media_id in media_ids)
+    return client.channels.update(http_method='POST', **{
+        'channel_key': channel_key,
+        'custom.sms_media_ids': 'media_ids:{}:'.format(media_ids_string)
+    })
+
+
 def create_calls(client, creates):
     """
     Return an iterator of callables representing the API calls for each create job.
     """
     for create in creates:
         type_, resource = create.get('type'), create.get('resource', {})
+
+        def log(response):
+            return {'job': resource, 'log': response}
 
         if type_ == 'videos':
             params = resource_to_params(resource)
@@ -196,6 +260,10 @@ def create_calls(client, creates):
                     return client.channels.create(type='manual', http_method='POST', **params)
 
             yield do_create
+        elif type_ == 'videos_insert':
+            yield lambda delay: log(videos_insert(client, delay, resource))
+        elif type_ == 'videos_delete':
+            yield lambda delay: log(videos_delete(client, delay, resource))
         else:
             LOG.warning('Skipping unknown update type: %s', type_)
 
@@ -251,6 +319,10 @@ def update_calls(client, updates):
                 yield lambda delay: log(
                     client.channels.update(http_method='POST', **resource_to_params(resource))
                 )
+            elif type_ == 'videos_insert':
+                yield lambda delay: log(videos_insert(client, delay, resource))
+            elif type_ == 'videos_delete':
+                yield lambda delay: log(videos_delete(client, delay, resource))
             elif type_ == 'image_load':
                 yield image_load
             elif type_ == 'image_check':

@@ -47,7 +47,7 @@ COPY (
         m.title AS title,
         m.description AS description,
         m.collection_id AS collection_id,
-        sms_collection.instid AS instid, # FIXME
+        sms_collection.instid AS instid,
         m.aspect_ratio AS aspect_ratio,
         m.creator AS creator,
         m.dspace AS in_dspace,
@@ -58,7 +58,7 @@ COPY (
         m.visibility AS visibility,
         m.acl AS acl,
         m.screencast AS screencast,
-        coalesce(m.image_id, sms_collection.image_id) AS image_id, # FIXME
+        coalesce(m.image_id, sms_collection.image_id) AS image_id,
         md5(i.data) AS image_md5,
         m.dspace_path AS dspace_path,
         m.featured AS featured,

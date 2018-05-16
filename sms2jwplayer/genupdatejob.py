@@ -92,7 +92,7 @@ def process_channels(_, fobj, items, channels):
         if len(delta) > 0:
             # The delta is non-empty, so construct an update request. FSR, the *update* request for
             # JWPlatform requires the channel be specified via 'channel_key' but said key appears
-            # in the channel resource returned by /channels/list as 'key'. FIXME?
+            # in the channel resource returned by /channels/list as 'key'.
             update = {'channel_key': channel['key']}
             update.update(delta)
             updates.append({
@@ -172,30 +172,20 @@ def process_videos_in_channels(_, fobj, items, channels):
 
     # Generate updates for existing channels
     for item, channel in associations:
-        print(item.media_ids)
-
         media_ids = []
         media_ids_prop = get_key_path(channel, 'custom.sms_media_ids')
         if media_ids_prop:
             media_ids = parse_custom_prop('media_ids', media_ids_prop).split(',')
 
         insert = set(item.media_ids) - set(media_ids)
+        updates.extend(make_videos_in_channels_jobs(item, 'videos_insert', insert))
+
         delete = set(media_ids) - set(item.media_ids)
-
-        updates.extend([{
-            'type': 'videos_insert', 'resource': {'media_id': media_id}
-        } for media_id in insert])
-
-        updates.extend([{
-            'type': 'videos_delete', 'resource': {'media_id': media_id}
-        } for media_id in delete])
+        updates.extend(make_videos_in_channels_jobs(item, 'videos_delete', delete))
 
     # Generate creates for new channels
     for item in (items_by_collection_id[collection_id] for collection_id in new_collection_ids):
-
-        creates.extend([{
-            'type': 'videos_insert', 'resource': {'media_id': media_id}
-        } for media_id in item.media_ids])
+        creates.extend(make_videos_in_channels_jobs(item, 'videos_insert', item.media_ids))
 
     LOG.info('Number of JWPlatform channels matched to SMS collection items: %s',
              len(associations))
@@ -208,6 +198,13 @@ def process_videos_in_channels(_, fobj, items, channels):
     LOG.info('Number of channel updates: %s', len(updates))
 
     json.dump({'create': creates, 'update': updates}, fobj)
+
+
+def make_videos_in_channels_jobs(item, type, media_ids):
+    """Helper to create the videos_insert|videos_delete jobs."""
+    return [{
+        'type': type, 'resource': {'collection_id': item.collection_id, 'media_id': int(media_id)}
+    } for media_id in media_ids]
 
 
 def process_videos(opts, fobj, items, videos):
@@ -416,13 +413,11 @@ def make_resource_for_video(item):
         # visibility - migration merged with sms_acl
         'sms_acl': 'acl:{}:'.format(convert_acl(item.visibility, item.acl)),
         'sms_screencast': 'screencast:{}:'.format(item.screencast),
-        # FIXME
         'sms_image_id': 'image_id:{}:'.format(item.image_id),
         'sms_image_md5': 'image_md5:{}:'.format(item.image_md5),
         # dspace_path - migration not required
         'sms_featured': 'featured:{}:'.format(item.featured),
         'sms_branding': 'branding:{}:'.format(item.branding),
-        # FIXME
         'sms_last_updated_at': 'last_updated_at:{}:'.format(item.last_updated_at),
         'sms_updated_by': 'updated_by:{}:'.format(item.updated_by),
         'sms_downloadable': 'downloadable:{}:'.format(item.downloadable),

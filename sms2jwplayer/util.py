@@ -167,13 +167,7 @@ def key_for_media_id(media_id, preferred_media_type='video', client=None):
     return video_resource['key']
 
 
-class ChannelNotFoundError(RuntimeError):
-    """
-    The provided SMS collection id does not have a corresponding JWPlatform channel.
-    """
-
-
-def key_for_collection_id(collection_id, client=None):
+def channel_for_collection_id(collection_id, client=None):
     """
     :param collection_id: the SMS collection id of the required channel
     :type collection_id: int
@@ -202,6 +196,27 @@ def key_for_collection_id(collection_id, client=None):
             continue
 
         channel_resource = channel
+
+    return channel_resource
+
+
+class ChannelNotFoundError(RuntimeError):
+    """
+    The provided SMS collection id does not have a corresponding JWPlatform channel.
+    """
+
+
+def key_for_collection_id(collection_id, client=None):
+    """
+    :param collection_id: the SMS collection id of the required channel
+    :type collection_id: int
+    :param client: (options) an authenticated JWPlatform client as returned by
+        :py:func:`.get_jwplatform_client`. If ``None``, call :py:func:`.get_jwplatform_client`.
+    :raises: :py:class:`.ChannelNotFoundError` if the collection id does not correspond to a
+        JWPlatform channel.
+
+    """
+    channel_resource = channel_for_collection_id(collection_id, client)
 
     # If no channel found, raise error
     if channel_resource is None:
