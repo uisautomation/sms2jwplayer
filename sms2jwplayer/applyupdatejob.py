@@ -61,8 +61,11 @@ LOG = logging.getLogger('applyupdatejob')
 #: Maximum number of attempts on an API call before giving up
 MAX_ATTEMPTS = 20
 
-#: Maximum delay bewtween each API call
-MAX_DELAY = 3.
+#: Maximum delay between each API call
+MAX_DELAY = 3.0
+
+#: Minimum delay between each API call
+MIN_DELAY = 0.05
 
 
 def main(opts):
@@ -370,11 +373,12 @@ def execute_api_calls_respecting_rate_limit(call_iterable):
                 yield api_call(delay)
 
                 # On a successful call, slightly shorten the delay
-                delay = max(1e-2, min(MAX_DELAY, delay * 0.8))
+                delay = max(MIN_DELAY, min(MAX_DELAY, delay * 0.8))
                 time.sleep(delay)
                 break
             except JWPlatformRateLimitExceededError as error:
-                delay = max(1e-2, min(MAX_DELAY, 2. * delay))
+                # On a rate limit failure, lengthen the delay
+                delay = max(MIN_DELAY, min(MAX_DELAY, 2. * delay))
                 time.sleep(delay)
                 error_message = error.message
         if error_message:

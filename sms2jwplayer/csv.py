@@ -25,7 +25,7 @@ same but prefixed by "`sms_`".
 
 * ``collection_id`` - Numeric ID for the SMS collection.
 
-* ``title`` - A string giving the title of the collection. This is migrated directly to the title 
+* ``title`` - A string giving the title of the collection. This is migrated directly to the title
   of the channel in jwplayer and not as a custom property.
 
 * ``description`` - A string giving the description of the collection. This is migrated directly to
@@ -37,7 +37,7 @@ same but prefixed by "`sms_`".
 
 * ``instid`` - String ID for institution which owns the collection.
 
-* ``groupid - The ID of a lookup group whose members can edit this collection. 
+* ``groupid - The ID of a lookup group whose members can edit this collection.
 
 * ``image_id`` - The id of the collection's custom thumbnail - empty if a thumbnail was never
   uploaded to legacy SMS.
