@@ -51,10 +51,9 @@ import sys
 import time
 
 import tqdm
-from jwplatform.errors import JWPlatformRateLimitExceededError
+from jwplatform.errors import JWPlatformRateLimitExceededError, JWPlatformError
 
 from . import util
-
 
 LOG = logging.getLogger('applyupdatejob')
 
@@ -128,7 +127,10 @@ def videos_insert(client, delay, resource):
         # we do this in-case the job is accidentally run twice
         return 'video {} already in channel {}'.format(video_key, channel['key'])
     media_ids.add(resource['media_id'])
-    response = client.channels.videos.create(channel_key=channel['key'], video_key=video_key)
+    try:
+        response = client.channels.videos.create(channel_key=channel['key'], video_key=video_key)
+    except JWPlatformError as e:
+        return str(e)
     if response['status'] == 'ok':
         time.sleep(delay)
         return {'insert': response, 'update': update_media_ids(client, channel['key'], media_ids)}
@@ -152,7 +154,10 @@ def videos_delete(client, delay, resource):
         # we do this in-case the job is accidentally run twice
         return 'video {} not in channel {}'.format(video_key, channel['key'])
     media_ids.remove(resource['media_id'])
-    response = client.channels.videos.delete(channel_key=channel['key'], video_key=video_key)
+    try:
+        response = client.channels.videos.delete(channel_key=channel['key'], video_key=video_key)
+    except JWPlatformError as e:
+        return str(e)
     if response['status'] == 'ok':
         time.sleep(delay)
         return {'delete': response, 'update': update_media_ids(client, channel['key'], media_ids)}
