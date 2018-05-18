@@ -93,12 +93,12 @@ class UtilTests(JWPlatformTestCase):
     def test_channel_for_collection_id__2_channels(self):
         """Test that if 2 channels are found - one is returned and a warning is logged"""
 
+        channel_2 = dict(CHANNEL_FIXTURE)
+        channel_2['key'] = 'JvqGHkJR'
+
         self.client.channels.list.return_value = {
             'status': 'ok',
-            'channels': [
-                CHANNEL_FIXTURE,
-                {**CHANNEL_FIXTURE, **{'key': 'JvqGHkJR'}}
-            ]
+            'channels': [CHANNEL_FIXTURE, channel_2]
         }
 
         with self.assertLogs() as logs:
