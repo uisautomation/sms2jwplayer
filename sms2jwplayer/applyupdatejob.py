@@ -16,7 +16,7 @@ The Create object specifies a list of JWPlatform resources which should be creat
 .. code:: js
 
     {
-        "type": "videos|channels",
+        "type": "videos|channels|videos_insert|videos_delete",
         "resource: {
             // dictionary of resource properties
         }
@@ -27,7 +27,7 @@ The Update object specifies a list of JWPlatform resources which need to be upda
 .. code:: js
 
     {
-        "type": "videos|channels|image_load|image_load|image_check",
+        "type": "videos|channels|image_load|image_load|image_check|videos_insert|videos_delete",
         "resource": {
             // dictionary of properties to update
         }

@@ -187,17 +187,21 @@ def channel_for_collection_id(collection_id, client=None):
         'search:custom.sms_collection_id': collection_id_value,
     })
 
-    # Loop through "videos" to find the preferred one based on mediatype
-    channel_resource = None
-    for channel in response.get('channels', []):
-        # Sanity check: skip channels with wrong collection id since video search is
-        # not "is equal to", it is "contains".
-        if channel.get('custom', {}).get('sms_collection_id') != collection_id_value:
-            continue
+    # Find all channels with matching collection id
+    matching = [
+        channel for channel in response.get('channels', [])
+        if channel.get('custom', {}).get('sms_collection_id') == collection_id_value
+    ]
 
-        channel_resource = channel
+    if len(matching) == 0:
+        # no matches are found
+        return None
 
-    return channel_resource
+    if len(matching) > 1:
+        # too many matches are found
+        LOG.warning('Collection {} matches more than one channel'.format(collection_id))
+
+    return matching[0]
 
 
 class ChannelNotFoundError(RuntimeError):
