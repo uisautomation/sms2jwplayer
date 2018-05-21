@@ -168,16 +168,22 @@ def process_videos_in_channels(_, fobj, collections, channels):
         videos_insert/videos_delete jobs (which is returned). """
 
         updates = []
-        media_ids = []
-        media_ids_prop = get_key_path(channel, 'custom.sms_media_ids')
-        if media_ids_prop:
-            media_ids = parse_custom_prop('media_ids', media_ids_prop).split(',')
 
-        insert = set(collection.media_ids) - set(media_ids)
+        def get_media_ids(prop_name):
+            """Gets either media_ids or failed_media_ids"""
+            media_ids_prop = get_key_path(channel, 'custom.sms_' + prop_name)
+            if not media_ids_prop:
+                return []
+            return parse_custom_prop(prop_name, media_ids_prop).split(',')
+
+        media_ids = set(get_media_ids('media_ids'))
+        media_ids |= set(get_media_ids('failed_media_ids'))
+
+        insert = set(collection.media_ids) - media_ids
         if insert:
             updates.extend(make_videos_in_channels_jobs(collection, 'videos_insert', insert))
 
-        delete = set(media_ids) - set(collection.media_ids)
+        delete = media_ids - set(collection.media_ids)
         if delete:
             updates.extend(make_videos_in_channels_jobs(collection, 'videos_delete', delete))
 

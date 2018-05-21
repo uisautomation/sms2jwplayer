@@ -111,8 +111,8 @@ def main(opts):
 
 
 def videos_insert(client, delay, resource):
-    """Inserts a video into a channel and updates the custom sms_media_ids param to reflect the new
-    state of the channel."""
+    """Inserts a video into a channel and updates the custom sms_media_ids param to reflect
+    the new state of the channel."""
     try:
         video_key = util.key_for_media_id(resource['media_id'])
         time.sleep(delay)
@@ -123,23 +123,30 @@ def videos_insert(client, delay, resource):
     if not channel:
         return 'channel not found for collection_id: {}'.format(resource['collection_id'])
     media_ids = get_media_ids_from_channel(channel)
-    if resource['media_id'] in media_ids:
+    failed_media_ids = get_media_ids_from_channel(channel, prop_name='failed_media_ids')
+    if resource['media_id'] in (media_ids | failed_media_ids):
         # we do this in-case the job is accidentally run twice
         return 'video {} already in channel {}'.format(video_key, channel['key'])
-    media_ids.add(resource['media_id'])
     try:
         response = client.channels.videos.create(channel_key=channel['key'], video_key=video_key)
     except JWPlatformError as e:
-        return str(e)
+        message = 'channel_key: {}, video_key: {} - {}'.format(channel['key'], video_key, e)
+        # record this failure in the failed_media_ids property so we know not to re-run
+        failed_media_ids.add(resource['media_id'])
+        update_resource = update_media_ids(
+            client, channel['key'], failed_media_ids, prop_name='failed_media_ids'
+        )
+        return {'insert': message, 'update': update_resource}
     if response['status'] == 'ok':
         time.sleep(delay)
+        media_ids.add(resource['media_id'])
         return {'insert': response, 'update': update_media_ids(client, channel['key'], media_ids)}
     return response
 
 
 def videos_delete(client, delay, resource):
-    """Deletes a video from a channel and updates the custom sms_media_ids param to reflect the new
-    state of the channel."""
+    """Deletes a video from a channel and updates the custom sms_media_ids param to reflect
+    the new state of the channel."""
     try:
         video_key = util.key_for_media_id(resource['media_id'])
         time.sleep(delay)
@@ -157,27 +164,30 @@ def videos_delete(client, delay, resource):
     try:
         response = client.channels.videos.delete(channel_key=channel['key'], video_key=video_key)
     except JWPlatformError as e:
-        return str(e)
+        return 'channel_key: {}, video_key: {} - {}'.format(channel['key'], video_key, e)
     if response['status'] == 'ok':
         time.sleep(delay)
         return {'delete': response, 'update': update_media_ids(client, channel['key'], media_ids)}
     return response
 
 
-def get_media_ids_from_channel(channel):
-    """Retrieves the custom sms_media_ids param from a channel.."""
-    default = {'sms_media_ids': 'media_ids::'}
-    media_ids_prop = channel.get('custom', default).get('sms_media_ids', default['sms_media_ids'])
-    media_ids = util.parse_custom_prop('media_ids', media_ids_prop)
+def get_media_ids_from_channel(channel, prop_name='media_ids'):
+    """Retrieves the custom sms_media_ids param from a channel.
+    prop_name is used if failed_media_ids is required"""
+    full_prop_name = 'sms_' + prop_name
+    default = {full_prop_name: prop_name + '::'}
+    media_ids_prop = channel.get('custom', default).get(full_prop_name, default[full_prop_name])
+    media_ids = util.parse_custom_prop(prop_name, media_ids_prop)
     return set([] if media_ids == '' else [int(media_id) for media_id in media_ids.split(',')])
 
 
-def update_media_ids(client, channel_key, media_ids):
-    """Updates a channel with a new custom sms_media_ids param."""
+def update_media_ids(client, channel_key, media_ids, prop_name='media_ids'):
+    """Updates a channel with a new custom sms_media_ids param.
+    prop_name is used if failed_media_ids is required"""
     media_ids_string = ','.join(str(media_id) for media_id in media_ids)
     return client.channels.update(http_method='POST', **{
         'channel_key': channel_key,
-        'custom.sms_media_ids': 'media_ids:{}:'.format(media_ids_string)
+        'custom.sms_' + prop_name: prop_name + ':{}:'.format(media_ids_string)
     })
 
 
