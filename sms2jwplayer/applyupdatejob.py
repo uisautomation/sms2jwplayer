@@ -16,7 +16,7 @@ The Create object specifies a list of JWPlatform resources which should be creat
 .. code:: js
 
     {
-        "type": "videos",
+        "type": "videos|channels|videos_insert|videos_delete",
         "resource: {
             // dictionary of resource properties
         }
@@ -27,7 +27,7 @@ The Update object specifies a list of JWPlatform resources which need to be upda
 .. code:: js
 
     {
-        "type": "videos|image_load|image_load|image_check",
+        "type": "videos|channels|image_load|image_load|image_check|videos_insert|videos_delete",
         "resource": {
             // dictionary of properties to update
         }
@@ -38,7 +38,7 @@ The Delete object specifies a list of JWPlatform resources which need to be dele
 .. code:: js
 
     {
-        "type": "videos",
+        "type": "videos|channels",
         "resource": {
             // dictionary of parameters to delete request
         }
@@ -51,18 +51,20 @@ import sys
 import time
 
 import tqdm
-from jwplatform.errors import JWPlatformRateLimitExceededError
+from jwplatform.errors import JWPlatformRateLimitExceededError, JWPlatformError
 
 from . import util
-
 
 LOG = logging.getLogger('applyupdatejob')
 
 #: Maximum number of attempts on an API call before giving up
 MAX_ATTEMPTS = 20
 
-#: Maximum delay bewtween each API call
-MAX_DELAY = 3.
+#: Maximum delay between each API call
+MAX_DELAY = 2.0
+
+#: Minimum delay between each API call
+MIN_DELAY = 0.02
 
 
 def main(opts):
@@ -108,12 +110,96 @@ def main(opts):
             }, f)
 
 
-def create_calls(client, updates):
+def videos_insert(client, delay, resource):
+    """Inserts a video into a channel and updates the custom sms_media_ids param to reflect
+    the new state of the channel."""
+    try:
+        video_key = util.key_for_media_id(resource['media_id'])
+        time.sleep(delay)
+    except util.VideoNotFoundError:
+        return 'video not found for media_id: {}'.format(resource['media_id'])
+    channel = util.channel_for_collection_id(resource['collection_id'], client)
+    time.sleep(delay)
+    if not channel:
+        return 'channel not found for collection_id: {}'.format(resource['collection_id'])
+    media_ids = get_media_ids_from_channel(channel)
+    failed_media_ids = get_media_ids_from_channel(channel, prop_name='failed_media_ids')
+    if resource['media_id'] in (media_ids | failed_media_ids):
+        # we do this in-case the job is accidentally run twice
+        return 'video {} already in channel {}'.format(video_key, channel['key'])
+    try:
+        response = client.channels.videos.create(channel_key=channel['key'], video_key=video_key)
+    except JWPlatformError as e:
+        message = 'channel_key: {}, video_key: {} - {}'.format(channel['key'], video_key, e)
+        # record this failure in the failed_media_ids property so we know not to re-run
+        failed_media_ids.add(resource['media_id'])
+        update_resource = update_media_ids(
+            client, channel['key'], failed_media_ids, prop_name='failed_media_ids'
+        )
+        return {'insert': message, 'update': update_resource}
+    if response['status'] == 'ok':
+        time.sleep(delay)
+        media_ids.add(resource['media_id'])
+        return {'insert': response, 'update': update_media_ids(client, channel['key'], media_ids)}
+    return response
+
+
+def videos_delete(client, delay, resource):
+    """Deletes a video from a channel and updates the custom sms_media_ids param to reflect
+    the new state of the channel."""
+    try:
+        video_key = util.key_for_media_id(resource['media_id'])
+        time.sleep(delay)
+    except util.VideoNotFoundError:
+        return 'video not found for media_id: ' + resource['media_id']
+    channel = util.channel_for_collection_id(resource['collection_id'], client)
+    time.sleep(delay)
+    if not channel:
+        return 'channel not found for collection_id: ' + resource['collection_id']
+    media_ids = get_media_ids_from_channel(channel)
+    if resource['media_id'] not in media_ids:
+        # we do this in-case the job is accidentally run twice
+        return 'video {} not in channel {}'.format(video_key, channel['key'])
+    media_ids.remove(resource['media_id'])
+    try:
+        response = client.channels.videos.delete(channel_key=channel['key'], video_key=video_key)
+    except JWPlatformError as e:
+        return 'channel_key: {}, video_key: {} - {}'.format(channel['key'], video_key, e)
+    if response['status'] == 'ok':
+        time.sleep(delay)
+        return {'delete': response, 'update': update_media_ids(client, channel['key'], media_ids)}
+    return response
+
+
+def get_media_ids_from_channel(channel, prop_name='media_ids'):
+    """Retrieves the custom sms_media_ids param from a channel.
+    prop_name is used if failed_media_ids is required"""
+    full_prop_name = 'sms_' + prop_name
+    default = {full_prop_name: prop_name + '::'}
+    media_ids_prop = channel.get('custom', default).get(full_prop_name, default[full_prop_name])
+    media_ids = util.parse_custom_prop(prop_name, media_ids_prop)
+    return set([] if media_ids == '' else [int(media_id) for media_id in media_ids.split(',')])
+
+
+def update_media_ids(client, channel_key, media_ids, prop_name='media_ids'):
+    """Updates a channel with a new custom sms_media_ids param.
+    prop_name is used if failed_media_ids is required"""
+    media_ids_string = ','.join(str(media_id) for media_id in media_ids)
+    return client.channels.update(http_method='POST', **{
+        'channel_key': channel_key,
+        'custom.sms_' + prop_name: prop_name + ':{}:'.format(media_ids_string)
+    })
+
+
+def create_calls(client, creates):
     """
     Return an iterator of callables representing the API calls for each create job.
     """
-    for update in updates:
-        type_, resource = update.get('type'), update.get('resource', {})
+    for create in creates:
+        type_, resource = create.get('type'), create.get('resource', {})
+
+        def log(response):
+            return {'job': resource, 'log': response}
 
         if type_ == 'videos':
             params = resource_to_params(resource)
@@ -134,12 +220,14 @@ def create_calls(client, updates):
                     except ValueError:
                         LOG.warning('Skipping video with bad media id prop: %s', media_id_prop)
                     else:
-                        # Attempt to find a matching video for this media id. If None found, that's
-                        # OK.
+                        # Attempt to find a matching video for this media id.
+                        # If None found, that's OK.
                         try:
                             video_key = util.key_for_media_id(media_id)
                         except util.VideoNotFoundError:
                             pass
+                        finally:
+                            time.sleep(delay)
 
                 if video_key is not None:
                     LOG.warning('Updating video %(video_key)s instead of creating new one',
@@ -150,6 +238,54 @@ def create_calls(client, updates):
                     return client.videos.create(http_method='POST', **params)
 
             yield do_create
+
+        elif type_ == 'channels':
+            params = resource_to_params(resource)
+
+            # We wrap the entire create/update process in a function since we make use of two API
+            # calls (one is via key_for_media_id). Hence we want to re-try the entire thing if we
+            # hit the API rate limit.
+            def do_create(delay):
+                # If channel_key is set to anything other than None, an update of that channel key
+                # will be done instead.
+                channel_key = None
+
+                # See if the resource already exists. If so, perform an update instead.
+                collection_id_prop = params.get('custom.sms_collection_id')
+                if collection_id_prop is not None:
+                    try:
+                        collection_id = int(util.parse_custom_prop(
+                            'collection', collection_id_prop
+                        ))
+                    except ValueError:
+                        LOG.warning(
+                            'Skipping video with bad collection id prop: %s', collection_id_prop
+                        )
+                    else:
+                        # Attempt to find a matching channel for this collection id.
+                        # If None found, that's OK.
+                        try:
+                            channel_key = util.key_for_collection_id(collection_id)
+                        except util.ChannelNotFoundError:
+                            pass
+                        finally:
+                            time.sleep(delay)
+
+                if channel_key is not None:
+                    LOG.warning(
+                        'Updating channel %(channel_key)s instead of creating new one',
+                        {'channel_key': channel_key}
+                    )
+                    return client.channels.update(
+                        http_method='POST', channel_key=channel_key, **params)
+                else:
+                    return client.channels.create(type='manual', http_method='POST', **params)
+
+            yield do_create
+        elif type_ == 'videos_insert':
+            yield lambda delay: log(videos_insert(client, delay, resource))
+        elif type_ == 'videos_delete':
+            yield lambda delay: log(videos_delete(client, delay, resource))
         else:
             LOG.warning('Skipping unknown update type: %s', type_)
 
@@ -201,6 +337,14 @@ def update_calls(client, updates):
                 yield lambda delay: log(
                     client.videos.update(http_method='POST', **resource_to_params(resource))
                 )
+            elif type_ == 'channels':
+                yield lambda delay: log(
+                    client.channels.update(http_method='POST', **resource_to_params(resource))
+                )
+            elif type_ == 'videos_insert':
+                yield lambda delay: log(videos_insert(client, delay, resource))
+            elif type_ == 'videos_delete':
+                yield lambda delay: log(videos_delete(client, delay, resource))
             elif type_ == 'image_load':
                 yield image_load
             elif type_ == 'image_check':
@@ -239,7 +383,7 @@ def execute_api_calls_respecting_rate_limit(call_iterable):
 
     """
     # delay between calls to not hit rate limit
-    delay = 0.1  # seconds
+    delay = MIN_DELAY  # seconds
 
     for api_call in call_iterable:
         error_message = None
@@ -248,11 +392,12 @@ def execute_api_calls_respecting_rate_limit(call_iterable):
                 yield api_call(delay)
 
                 # On a successful call, slightly shorten the delay
-                delay = max(1e-2, min(MAX_DELAY, delay * 0.8))
+                delay = max(MIN_DELAY, min(MAX_DELAY, delay * 0.2))
                 time.sleep(delay)
                 break
             except JWPlatformRateLimitExceededError as error:
-                delay = max(1e-2, min(MAX_DELAY, 2. * delay))
+                # On a rate limit failure, lengthen the delay
+                delay = max(MIN_DELAY, min(MAX_DELAY, delay * 8.0))
                 time.sleep(delay)
                 error_message = error.message
         if error_message:

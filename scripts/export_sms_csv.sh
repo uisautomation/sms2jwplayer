@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Output SMS feed URL directly from SMS database.
+# Output SMS media data directly from SMS database.
 #
 # Usage:
-#   export_sms_feed.sh <sms-host> [<csv>]
+#   export_sms_csv.sh <sms-host> [<csv>]
 #
 # Options:
 #
@@ -19,7 +19,7 @@ HOST=$1
 CSV=$2
 
 if [ -z "${HOST}" ]; then
-    echo "usage: export_sms_feed <sms-host> [<csv>]" >&2
+    echo "usage: export_sms_csv.sh <sms-host> [<csv>]" >&2
     exit 1
 fi
 
@@ -50,7 +50,6 @@ COPY (
         sms_collection.instid AS instid,
         m.aspect_ratio AS aspect_ratio,
         m.creator AS creator,
-        m.dspace AS in_dspace,
         m.publisher AS publisher,
         m.copyright AS copyright,
         m.language AS language,
@@ -60,15 +59,12 @@ COPY (
         m.screencast AS screencast,
         coalesce(m.image_id, sms_collection.image_id) AS image_id,
         md5(i.data) AS image_md5,
-        m.dspace_path AS dspace_path,
         m.featured AS featured,
         m.branding AS branding,
         m.last_updated AS last_updated_at,
         m.updated_by AS updated_by,
         m.downloadable AS downloadable,
-        m.withdrawn AS withdrawn,
-        m.abstract AS abstract,
-        m.priority AS priority
+        m.withdrawn AS withdrawn
     FROM
         sms_media m
         JOIN sms_clip ON sms_clip.media_id = m.id

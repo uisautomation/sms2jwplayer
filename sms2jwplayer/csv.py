@@ -9,6 +9,61 @@ import enum
 import dateutil.parser
 
 
+CollectionItem = collections.namedtuple('CollectionItem', (
+    'collection_id', 'title', 'description',
+    'website_url', 'created_by', 'instid',
+    'groupid', 'image_id', 'acl',
+    'created_at', 'last_updated_at', 'updated_by',
+    'media_ids'
+))
+
+CollectionItem.__doc__ = """
+Representation of a single collection within the SMS.
+The attributes below are all the columns in the :any:`csvexport`. Unless otherwise stated, the
+attribute is migrated to a custom property in jwplayer and the name of that property will be the
+same but prefixed by "`sms_`".
+
+* ``collection_id`` - Numeric ID for the SMS collection.
+
+* ``title`` - A string giving the title of the collection. This is migrated directly to the title
+  of the channel in jwplayer and not as a custom property.
+
+* ``description`` - A string giving the description of the collection. This is migrated directly to
+  the description of the channel in jwplayer and not as a custom property.
+
+* ``website_url`` - An optional link to the users website.
+
+* ``created_by`` - The media item's creator.
+
+* ``instid`` - String ID for institution which owns the collection.
+
+* ``groupid - The ID of a lookup group whose members can edit this collection.
+
+* ``image_id`` - The id of the collection's custom thumbnail - empty if a thumbnail was never
+  uploaded to legacy SMS.
+
+* ``acl`` - An ACL defining the visibility of the collection.
+
+* ``created_at`` - An ISO 8601 formatted date and time indicating when the collection was first
+  created.
+
+* ``last_updated_at`` - When the collection was last updated.
+
+* ``updated_by`` - Who last updated the collection (CRSID).
+
+* ``media_ids`` - A CSV list of the ids all the media items contained by this collection.
+"""
+
+# Callables which massage strings into the right types for each column
+CollectionItem._ITEM_TYPES = [
+    int, str, str,
+    str, str, str,
+    str, lambda i: int(i) if i != '' else None, lambda acl: acl.split(','),
+    dateutil.parser.parse, dateutil.parser.parse, str,
+    lambda media_ids: media_ids.split(',') if media_ids != '' else [],
+]
+
+
 class MediaFormat(enum.Enum):
     VIDEO = 'archive-h264'
     AUDIO = 'audio'
@@ -27,13 +82,6 @@ Representation of a single media item within the SMS.
 The attributes below are all the columns in the :any:`csvexport`. Unless otherwise stated, the
 attribute is migrated to a custom property in jwplayer and the name of that property will be the
 same but prefixed by "`sms_`".
-
-* ``media_id`` - Numeric ID for the SMS media item. An SMS media item may have multiple clips
-  associated with it which are encoded into various formats. The media item is the fundamental
-  object.
-
-* ``clip_id`` - Numeric ID for the SMS clip item. There may be multiple clips associated with a
-  single media item but they must have a unique format.
 
 * ``media_id`` - Numeric ID for the SMS media item. An SMS media item may have multiple clips
   associated with it which are encoded into various formats. The media item is the fundamental
@@ -64,9 +112,6 @@ same but prefixed by "`sms_`".
 * ``aspect_ratio`` - The media item's aspect ratio.
 
 * ``creator`` - The media item's creator. The migrated custom property name in sms_created_at.
-
-* ``in_dspace`` - Whether or not the media iten was archived in DSpace. This isn't migrated as it
-  is irrelevant in the context of jwplayer.
 
 * ``publisher`` - The publisher of the media item.
 
@@ -103,9 +148,6 @@ same but prefixed by "`sms_`".
 * ``image_md5`` - The md5 of the media item's custom thumbnail - empty if a thumbnail was never
   uploaded to legacy SMS.
 
-* ``dspace_path`` - The path of the media item archived in DSpace. This isn't migrated as it is
-  irrelevant in the context of jwplayer.
-
 * ``featured`` - Whether or not the media item is featured on the frontpage.
 
 * ``branding`` - No definition available.
@@ -117,16 +159,10 @@ same but prefixed by "`sms_`".
 * ``downloadable`` - Whether or not the media item can be downloaded from it's page.
 
 * ``withdrawn`` - No definition available.
-
-* ``abstract`` - A longer description of the media item. This isn't migrated as it's size makes
-  this impractical.
-
-* ``priority`` - A numeric priority (lowest = 0) that indicates how urgently a media item needs to
-  be transcoded. This isn't migrated as it is irrelevant in the context of jwplayer.
 """
 
 # Callables which massage strings into the right types for each column
-_MEDIA_ITEM_TYPES = [
+MediaItem._ITEM_TYPES = [
     int, int, MediaFormat, str, dateutil.parser.parse,
     str, str, int, str, str,
     str, lambda b: b == 't', str, str, str, str, str,
@@ -136,15 +172,13 @@ _MEDIA_ITEM_TYPES = [
 ]
 
 
-def load(fobj, skip_header_row=True):
-    """Load an SMS export from a file object. Return a list of
-    :py:class:`.MediaItem` instances. If *skip_header_row* is ``True``, the
-    first line of the CSV file is ignored.
+def load(item_type, fobj, skip_header_row=True):
+    """Load an SMS export from a file object. Return a list of item_type instances.
+    If *skip_header_row* is ``True``, the first line of the CSV file is ignored.
 
-    The CSV file must be in the format described in :any:`csvexport`. Any extra
-    columns are ignored. The ``media_id`` and ``clip_id`` columns are converted
-    to integers and the ``created_at`` column is parsed into a
-    :py:class:`datetime.datetime` instance.
+    The CSV file must be in the format described in :any:`csvexport`.
+    Any extra columns are ignored.
+    The columns are converted by the type defined in item_type._ITEM_TYPES.
 
     """
     reader = csv.reader(fobj)
@@ -154,6 +188,6 @@ def load(fobj, skip_header_row=True):
         next(reader)
 
     return [
-        MediaItem._make([t(v) for t, v in zip(_MEDIA_ITEM_TYPES, row)])
+        item_type._make([t(v) for t, v in zip(item_type._ITEM_TYPES, row)])
         for row in reader
     ]

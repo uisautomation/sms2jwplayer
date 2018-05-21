@@ -1,13 +1,13 @@
 """
-The fetch subcommand fetches metadata on jwplayer videos and stores it locally in JSON documents.
+The fetch subcommand fetches metadata on jwplayer videos or channels
+and stores it locally in JSON documents.
 
 """
 import json
 import logging
 import sys
 
-from .util import get_jwplatform_client, JWPlatformClientError
-
+from .util import get_jwplatform_client, JWPlatformClientError, get_data_type
 
 LOG = logging.getLogger(__name__)
 
@@ -20,14 +20,16 @@ def main(opts):
         sys.exit(1)
 
     current_offset = 0
+    _, data_type, _ = get_data_type(opts)
     while True:
-        LOG.info('Fetching videos starting from offset: %s', current_offset)
-        results = client.videos.list(
+        LOG.info('Fetching %s starting from offset: %s', data_type, current_offset)
+        results = getattr(client, data_type).list(
             result_offset=current_offset, result_limit=1000)
-        LOG.info('Got information on %s video(s)', len(results['videos']))
+        num_results = len(results[data_type])
+        LOG.info('Got information on %s %s', num_results, data_type)
 
         # Stop when we get no results
-        if len(results['videos']) == 0:
+        if num_results == 0:
             LOG.info('Stopping')
             break
 
@@ -36,4 +38,4 @@ def main(opts):
         with open(out_pn, 'w') as fobj:
             json.dump(results, fobj)
 
-        current_offset += len(results['videos'])
+        current_offset += num_results

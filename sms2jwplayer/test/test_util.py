@@ -2,9 +2,18 @@ from unittest import mock
 
 from io import StringIO
 
-from sms2jwplayer.util import upload_thumbnail_from_url
+from sms2jwplayer.util import upload_thumbnail_from_url, channel_for_collection_id
 
 from .util import JWPlatformTestCase
+
+CHANNEL_FIXTURE = {
+    'key': 'MrtH04gm',
+    'title': 'Light, Clocks and Sleep',
+    'description': 'The Discovery of a New Photoreceptor within the Eye',
+    'custom': {
+        'sms_collection_id': 'collection:123:'
+    }
+}
 
 
 class UtilTests(JWPlatformTestCase):
@@ -54,3 +63,48 @@ class UtilTests(JWPlatformTestCase):
             params=query,
             files={'file': urlopen.return_value}
         )
+
+    def test_channel_for_collection_id__success(self):
+        """Test that a channel is found"""
+
+        self.client.channels.list.return_value = {
+            'status': 'ok',
+            'channels': [CHANNEL_FIXTURE]
+        }
+
+        channel = channel_for_collection_id(123, client=self.client)
+
+        self.assertEquals(channel, CHANNEL_FIXTURE)
+
+        self.client.channels.list.assert_called_with(**{
+            'search:custom.sms_collection_id': 'collection:123:',
+        })
+
+    def test_channel_for_collection_id__no_channel(self):
+        """Test that no channel is found"""
+
+        self.client.channels.list.return_value = {
+            'status': 'ok',
+            'channels': []
+        }
+
+        self.assertIsNone(channel_for_collection_id(123, client=self.client))
+
+    def test_channel_for_collection_id__2_channels(self):
+        """Test that if 2 channels are found - one is returned and a warning is logged"""
+
+        channel_2 = dict(CHANNEL_FIXTURE)
+        channel_2['key'] = 'JvqGHkJR'
+
+        self.client.channels.list.return_value = {
+            'status': 'ok',
+            'channels': [CHANNEL_FIXTURE, channel_2]
+        }
+
+        with self.assertLogs() as logs:
+            channel = channel_for_collection_id(123, client=self.client)
+            self.assertEqual(logs.output, [
+                'WARNING:sms2jwplayer.util:Collection 123 matches more than one channel'
+            ])
+
+        self.assertEquals(channel, CHANNEL_FIXTURE)

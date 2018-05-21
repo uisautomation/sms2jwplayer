@@ -15,6 +15,8 @@ import jwplatform
 import requests
 import time
 
+from sms2jwplayer.csv import MediaItem, CollectionItem
+
 LOG = logging.getLogger(__name__)
 
 #: regex for parsing a custom prop field
@@ -114,13 +116,13 @@ def parse_custom_prop(expected_type, field):
 
 class VideoNotFoundError(RuntimeError):
     """
-    The provided SMS media ID does not have a corresponding JWPlatform video.
+    The provided SMS media id does not have a corresponding JWPlatform video.
     """
 
 
 def key_for_media_id(media_id, preferred_media_type='video', client=None):
     """
-    :param media_id: the SMS media ID of the required video
+    :param media_id: the SMS media id of the required video
     :type media_id: int
     :param preferred_media_type: (optional) the preferred media type to return. One of ``'video'``
         or ``'audio'``.
@@ -165,12 +167,79 @@ def key_for_media_id(media_id, preferred_media_type='video', client=None):
     return video_resource['key']
 
 
+def channel_for_collection_id(collection_id, client=None):
+    """
+    :param collection_id: the SMS collection id of the required channel
+    :type collection_id: int
+    :param client: (options) an authenticated JWPlatform client as returned by
+        :py:func:`.get_jwplatform_client`. If ``None``, call :py:func:`.get_jwplatform_client`.
+    :raises: :py:class:`.ChannelNotFoundError` if the collection id does not correspond to a
+        JWPlatform channel.
+
+    """
+    client = client if client is not None else get_jwplatform_client()
+
+    # The value of the sms_media_id custom property we search for
+    collection_id_value = 'collection:{:d}:'.format(collection_id)
+
+    # Search for channels
+    response = client.channels.list(**{
+        'search:custom.sms_collection_id': collection_id_value,
+    })
+
+    # Find all channels with matching collection id
+    matching = [
+        channel for channel in response.get('channels', [])
+        if channel.get('custom', {}).get('sms_collection_id') == collection_id_value
+    ]
+
+    if len(matching) == 0:
+        # no matches are found
+        return None
+
+    if len(matching) > 1:
+        # too many matches are found
+        LOG.warning('Collection {} matches more than one channel'.format(collection_id))
+
+    return matching[0]
+
+
+class ChannelNotFoundError(RuntimeError):
+    """
+    The provided SMS collection id does not have a corresponding JWPlatform channel.
+    """
+
+
+def key_for_collection_id(collection_id, client=None):
+    """
+    :param collection_id: the SMS collection id of the required channel
+    :type collection_id: int
+    :param client: (options) an authenticated JWPlatform client as returned by
+        :py:func:`.get_jwplatform_client`. If ``None``, call :py:func:`.get_jwplatform_client`.
+    :raises: :py:class:`.ChannelNotFoundError` if the collection id does not correspond to a
+        JWPlatform channel.
+
+    """
+    channel_resource = channel_for_collection_id(collection_id, client)
+
+    # If no channel found, raise error
+    if channel_resource is None:
+        raise ChannelNotFoundError()
+
+    # Check the channel we found has a non-None key
+    if channel_resource.get('key') is None:
+        raise ChannelNotFoundError()
+
+    return channel_resource['key']
+
+
 def upload_thumbnail_from_url(video_key, image_url, delay=None, client=None):
     """
     Updates the thumbnail for a particular video object with the image at image_url.
 
     :param video_key: <string> Video's object ID. Can be found within JWPlayer Dashboard.
     :param image_url: The public URL on the image to use as a thumbnail
+    :param delay: delay (in seconds) to apply between API calls
     :param client: (options) an authenticated JWPlatform client as returned by
         :py:func:`.get_jwplatform_client`. If ``None``, call :py:func:`.get_jwplatform_client`.
     """
@@ -189,3 +258,20 @@ def upload_thumbnail_from_url(video_key, image_url, delay=None, client=None):
     files = {'file': urllib.request.urlopen(image_url)}
 
     return requests.post(url, params=response['link']['query'], files=files).json()
+
+
+DATA_TYPE_DICT = {
+    'videos': ('videos', 'videos', MediaItem),
+    'channels': ('channels', 'channels', CollectionItem),
+    'videos_in_channels': ('videos_in_channels', 'channels', CollectionItem)
+}
+
+
+def get_data_type(opts):
+    """Gets the type of JWPlayer data ('videos' or 'channels' or 'videos_in_channels')
+    from the CL options"""
+    return next(
+        DATA_TYPE_DICT[data_type]
+        for data_type in ('videos', 'channels', 'videos_in_channels')
+        if opts.get(data_type, False)
+    )

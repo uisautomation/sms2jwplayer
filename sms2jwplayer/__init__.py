@@ -3,9 +3,11 @@ Tool to support bulk import of University of Cambridge SMS into JWPlayer.
 
 Usage:
     sms2jwplayer (-h | --help)
-    sms2jwplayer fetch [--verbose] [--base-name=NAME]
-    sms2jwplayer genupdatejob [--verbose] [--strip-leading=N]
+    sms2jwplayer fetch (videos|channels) [--verbose] [--base-name=NAME]
+    sms2jwplayer genupdatejob videos [--verbose] [--strip-leading=N]
         [--output=FILE] --base=URL --base-image-url=URL <csv> <metadata>...
+    sms2jwplayer genupdatejob channels [--verbose] [--output=FILE] <csv> <metadata>...
+    sms2jwplayer genupdatejob videos_in_channels [--verbose] [--output=FILE] <csv> <metadata>...
     sms2jwplayer applyupdatejob [--verbose] [--log-file=FILE] [<update>]
     sms2jwplayer analytics [--output=FILE] [--verbose] <date>
     sms2jwplayer tidy [--output=FILE] [--verbose] <metadata>...
@@ -21,6 +23,8 @@ Options:
                         use stdin.
 
     <date>              Date in YYYY-MM-DD format.
+
+    (videos|channels)   Type of list to retrieve
 
     --output=FILE       Output file. If omitted, use stdout.
 
@@ -38,11 +42,18 @@ Options:
 
 Sub commands:
 
-    fetch               Fetch details on all videos in jwplayer.
-    genupdatejob        Generate list of missing metadata for each video key.
-    applyupdatejob      Use JWPlatform API to update videos based on a job description file.
-    analytics           Generate SMS analytics for a given day.
-    tidy                Generate an update job which tidies the jwplayer database.
+    fetch                            Fetch details on either all videos or all channels from
+                                     jwplayer.
+    genupdatejob videos              Generate a job description file to create/update jwplayer
+                                     videos to match SMS media.
+    genupdatejob channels            Generate a job description file to create/update jwplayer
+                                     channels to match SMS collection.
+    genupdatejob videos_in_channels  Generate a job description file to insert/delete videos in
+                                     channels to match SMS.
+    applyupdatejob                   Use JWPlatform API to update jwplayer data based on a job
+                                     description file.
+    analytics                        Generate SMS analytics for a given day.
+    tidy                             Generate an update job which tidies the jwplayer database.
 
 """
 import logging
