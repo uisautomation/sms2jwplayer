@@ -63,7 +63,7 @@ def generic_channels_processor(fobj, collections, channels, create, update):
     # represented by a JWPlatform channel resource.
     associations = []
 
-    # A dictionary which allows retrieving collections by collection id.
+    # A dictionary which allows retrieval of collections by collection id.
     collections_by_id = dict((collection.collection_id, collection) for collection in collections)
 
     # A set of collection ids which could not be matched to a corresponding JWPlatform channel.
@@ -201,6 +201,9 @@ def make_videos_in_channels_jobs(collection, job_type, media_ids):
 
 
 def process_videos(opts, fobj, items, videos):
+
+    items = choose_media_format(items)
+
     """
     Process video metadata records with reference to a list of media items.
     Write results to file as JSON document.
@@ -225,43 +228,38 @@ def process_videos(opts, fobj, items, videos):
     # media item may have more than one JWPlatform video resource associated with it.
     associations = []
 
-    # A dictionary, keyed by media id, of sequences of items associated with that media
-    items_by_media_id = {}
-    for item in items:
-        media_items = items_by_media_id.get(item.media_id, list())
-        media_items.append(item)
-        items_by_media_id[item.media_id] = media_items
+    # A dictionary which allows retrieval of media_items by clip id.
+    items_by_id = dict((item.clip_id, item) for item in items)
 
     # A set of item media_ids which could not be matched to a corresponding JWPlatform video. This
     # starts full of all items but items are removed as matching happens.
-    new_media_ids = set(items_by_media_id.keys())
+    new_item_ids = set(items_by_id.keys())
 
     # Match jwplayer videos to SMS items
     for video in videos:
         # Find an existing SMS clip id
-        media_id_prop = get_key_path(video, 'custom.sms_media_id')
-        if media_id_prop is None:
+        item_id_prop = get_key_path(video, 'custom.sms_clip_id')
+        if item_id_prop is None:
             n_skipped += 1
             continue
 
-        media_id = int(parse_custom_prop('media', media_id_prop))
+        item_id = int(parse_custom_prop('clip', item_id_prop))
 
         # Retrieve the matching SMS media item (or record the inability to do so)
         try:
-            item = items_by_media_id[media_id]
+            item = items_by_id[item_id]
         except KeyError:
             unmatched_videos.append(video)
             continue
 
         # Remove matched item from new_items set
-        new_media_ids -= {media_id}
+        new_item_ids -= {item_id}
 
         # We now have a match between a video and SMS media item. Record the match.
         associations.append((item, video))
 
     # Generate updates for existing videos
-    for media_items, video in associations:
-        item = choose_item(media_items)
+    for item, video in associations:
         expected_video = make_resource_for_video(item)
 
         # Calculate delta from resource which exists to expected resource
@@ -299,8 +297,7 @@ def process_videos(opts, fobj, items, videos):
             updates.append({'type': 'image_check', 'resource': {'video_key': video['key']}})
 
     # Generate creates for new videos
-    for media_items in (items_by_media_id[media_id] for media_id in new_media_ids):
-        item = choose_item(media_items)
+    for item in (items_by_id[item_id] for item_id in new_item_ids):
 
         video = make_resource_for_video(item)
         video.update({
@@ -312,7 +309,7 @@ def process_videos(opts, fobj, items, videos):
         })
 
     LOG.info('Number of JWPlatform videos matched to SMS media items: %s', len(associations))
-    LOG.info('Number of SMS media items with no existing video: %s', len(new_media_ids))
+    LOG.info('Number of SMS media items with no existing video: %s', len(new_item_ids))
     LOG.info('Number of managed JWPlatform videos not matched to SMS media items: %s',
              len(unmatched_videos))
     LOG.info('Number of JWPlatform videos not managed by sms2jwplayer: %s', n_skipped)
@@ -322,20 +319,32 @@ def process_videos(opts, fobj, items, videos):
     json.dump({'create': creates, 'update': updates}, fobj)
 
 
-def choose_item(items):
+def choose_media_format(items):
     """FIXME"""
-    video_item, audio_item = None, None
 
+    items_by_media_id = {}
     for item in items:
-        if item.format is smscsv.MediaFormat.VIDEO:
-            video_item = item
-        elif item.format is smscsv.MediaFormat.AUDIO:
-            audio_item = item
-        else:
-            LOG.warning('Unknown format: %s', item.format)
+        media_items = items_by_media_id.get(item.media_id, list())
+        media_items.append(item)
+        items_by_media_id[item.media_id] = media_items
 
-    # Prefer video items over audio ones
-    return video_item if video_item is not None else audio_item
+    pruned_items = []
+
+    for media_items in items_by_media_id.values():
+
+        video_item, audio_item = None, None
+
+        for item in media_items:
+            if item.format is smscsv.MediaFormat.VIDEO:
+                video_item = item
+            elif item.format is smscsv.MediaFormat.AUDIO:
+                audio_item = item
+            else:
+                LOG.warning('Unknown format: %s', item.format)
+
+        pruned_items.append(video_item if video_item is not None else audio_item)
+
+    return pruned_items
 
 
 def updated_keys(source, target):
