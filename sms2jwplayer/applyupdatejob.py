@@ -114,11 +114,13 @@ def videos_insert(client, delay, resource):
     """Inserts a video into a channel and updates the custom sms_media_ids param to reflect
     the new state of the channel."""
     try:
-        video_key = util.key_for_clip_id(resource['clip_id'])
+        video_key = util.key_for_media_id(resource['media_id'])
         time.sleep(delay)
     except util.VideoNotFoundError:
-        return 'video not found for clip_id: {}'.format(resource['clip_id'])
-    channel = util.channel_for_collection_id(resource['collection_id'], client)
+        return 'video not found for media_id: {}'.format(resource['media_id'])
+    channel = util.resource_for_entity_id(
+        'channels', 'collection', resource['collection_id'], client
+    )
     time.sleep(delay)
     if not channel:
         return 'channel not found for collection_id: {}'.format(resource['collection_id'])
@@ -148,11 +150,13 @@ def videos_delete(client, delay, resource):
     """Deletes a video from a channel and updates the custom sms_media_ids param to reflect
     the new state of the channel."""
     try:
-        video_key = util.key_for_clip_id(resource['clip_id'])
+        video_key = util.key_for_media_id(resource['media_id'])
         time.sleep(delay)
     except util.VideoNotFoundError:
-        return 'video not found for clip_id: ' + resource['clip_id']
-    channel = util.channel_for_collection_id(resource['collection_id'], client)
+        return 'video not found for media_id: {}'.format(resource['media_id'])
+    channel = util.resource_for_entity_id(
+        'channels', 'collection', resource['collection_id'], client
+    )
     time.sleep(delay)
     if not channel:
         return 'channel not found for collection_id: ' + resource['collection_id']

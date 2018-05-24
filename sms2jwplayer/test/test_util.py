@@ -2,7 +2,7 @@ from unittest import mock
 
 from io import StringIO
 
-from sms2jwplayer.util import upload_thumbnail_from_url, channel_for_collection_id
+from sms2jwplayer.util import upload_thumbnail_from_url, resource_for_entity_id
 
 from .util import JWPlatformTestCase
 
@@ -64,7 +64,7 @@ class UtilTests(JWPlatformTestCase):
             files={'file': urlopen.return_value}
         )
 
-    def test_channel_for_collection_id__success(self):
+    def test_resource_for_entity_id__success(self):
         """Test that a channel is found"""
 
         self.client.channels.list.return_value = {
@@ -72,7 +72,7 @@ class UtilTests(JWPlatformTestCase):
             'channels': [CHANNEL_FIXTURE]
         }
 
-        channel = channel_for_collection_id(123, client=self.client)
+        channel = resource_for_entity_id('channels', 'collection', 123, client=self.client)
 
         self.assertEquals(channel, CHANNEL_FIXTURE)
 
@@ -80,7 +80,7 @@ class UtilTests(JWPlatformTestCase):
             'search:custom.sms_collection_id': 'collection:123:',
         })
 
-    def test_channel_for_collection_id__no_channel(self):
+    def test_resource_for_entity_id__no_channel(self):
         """Test that no channel is found"""
 
         self.client.channels.list.return_value = {
@@ -88,9 +88,11 @@ class UtilTests(JWPlatformTestCase):
             'channels': []
         }
 
-        self.assertIsNone(channel_for_collection_id(123, client=self.client))
+        self.assertIsNone(
+            resource_for_entity_id('channels', 'collection', 123, client=self.client)
+        )
 
-    def test_channel_for_collection_id__2_channels(self):
+    def test_resource_for_entity_id__2_channels(self):
         """Test that if 2 channels are found - one is returned and a warning is logged"""
 
         channel_2 = dict(CHANNEL_FIXTURE)
@@ -102,9 +104,9 @@ class UtilTests(JWPlatformTestCase):
         }
 
         with self.assertLogs() as logs:
-            channel = channel_for_collection_id(123, client=self.client)
+            channel = resource_for_entity_id('channels', 'collection', 123, client=self.client)
             self.assertEqual(logs.output, [
-                'WARNING:sms2jwplayer.util:Collection 123 matches more than one channel'
+                'WARNING:sms2jwplayer.util:collection 123 matches at least 2 channels'
             ])
 
         self.assertEquals(channel, CHANNEL_FIXTURE)

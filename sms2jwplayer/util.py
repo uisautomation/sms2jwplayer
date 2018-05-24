@@ -122,76 +122,53 @@ class VideoNotFoundError(RuntimeError):
 
 def key_for_clip_id(clip_id, client=None):
     """
-    :param clip_id: the SMS clip id of the required video
-    :type clip_id: int
+    :param clip_id: clip id of the SMS item to match the JWPlatform video
     :param client: (options) an authenticated JWPlatform client as returned by
         :py:func:`.get_jwplatform_client`. If ``None``, call :py:func:`.get_jwplatform_client`.
-    :raises: :py:class:`.VideoNotFoundError` if the clip id does not correspond to a JWPlatform
-        video.
-
+    :raises: :py:class:`.VideoNotFoundError`
+        if the clip id does not correspond to a JWPlatform video.
+    :return: The key of a JWPlatform video matching the clip id
     """
-    client = client if client is not None else get_jwplatform_client()
+    video = resource_for_entity_id('videos', 'clip', clip_id, client)
 
-    # The value of the sms_clip_id custom property we search for
-    clip_id_value = 'clip:{:d}:'.format(clip_id)
+    # If no channel found, raise error
+    if video is None:
+        raise VideoNotFoundError()
 
-    # Search for videos
-    response = client.videos.list(**{
-        'search:custom.sms_clip_id': clip_id_value,
-    })
+    # Check the channel we found has a non-None key
+    if video.get('key') is None:
+        raise VideoNotFoundError()
 
-    # Find all videos with matching clip id
-    matching = [
-        video for video in response.get('videos', [])
-        if video.get('custom', {}).get('sms_clip_id') == clip_id_value
-    ]
-
-    if len(matching) == 0:
-        # no matches are found
-        return None
-
-    if len(matching) > 1:
-        # too many matches are found
-        LOG.warning('Item {} matches more than one video'.format(clip_id))
-
-    return matching[0]
+    return video['key']
 
 
-def channel_for_collection_id(collection_id, client=None):
+def key_for_media_id(media_id, client=None):
     """
-    :param collection_id: the SMS collection id of the required channel
-    :type collection_id: int
+    :param media_id: media id of the SMS item to match the JWPlatform video
     :param client: (options) an authenticated JWPlatform client as returned by
         :py:func:`.get_jwplatform_client`. If ``None``, call :py:func:`.get_jwplatform_client`.
-    :raises: :py:class:`.ChannelNotFoundError` if the collection id does not correspond to a
-        JWPlatform channel.
+    :raises: :py:class:`.VideoNotFoundError`
+        if the clip id does not correspond to a JWPlatform video.
+    :return: The key of a JWPlatform video matching the media id
+    """
+    """
+    :param media_id: the SMS media id of the required video
+    :type media_id: int
+    :param client: (options) an authenticated JWPlatform client as returned by
+        :py:func:`.get_jwplatform_client`. If ``None``, call :py:func:`.get_jwplatform_client`.
 
     """
-    client = client if client is not None else get_jwplatform_client()
+    video = resource_for_entity_id('videos', 'media', media_id, client)
 
-    # The value of the sms_media_id custom property we search for
-    collection_id_value = 'collection:{:d}:'.format(collection_id)
+    # If no channel found, raise error
+    if video is None:
+        raise VideoNotFoundError()
 
-    # Search for channels
-    response = client.channels.list(**{
-        'search:custom.sms_collection_id': collection_id_value,
-    })
+    # Check the channel we found has a non-None key
+    if video.get('key') is None:
+        raise VideoNotFoundError()
 
-    # Find all channels with matching collection id
-    matching = [
-        channel for channel in response.get('channels', [])
-        if channel.get('custom', {}).get('sms_collection_id') == collection_id_value
-    ]
-
-    if len(matching) == 0:
-        # no matches are found
-        return None
-
-    if len(matching) > 1:
-        # too many matches are found
-        LOG.warning('Collection {} matches more than one channel'.format(collection_id))
-
-    return matching[0]
+    return video['key']
 
 
 class ChannelNotFoundError(RuntimeError):
@@ -202,25 +179,63 @@ class ChannelNotFoundError(RuntimeError):
 
 def key_for_collection_id(collection_id, client=None):
     """
-    :param collection_id: the SMS collection id of the required channel
-    :type collection_id: int
+    :param collection_id: collection id of the SMS item to match the JWPlatform video
     :param client: (options) an authenticated JWPlatform client as returned by
         :py:func:`.get_jwplatform_client`. If ``None``, call :py:func:`.get_jwplatform_client`.
-    :raises: :py:class:`.ChannelNotFoundError` if the collection id does not correspond to a
-        JWPlatform channel.
-
+    :raises: :py:class:`.ChannelNotFoundError`
+        if the clip id does not correspond to a JWPlatform channel.
+    :return: The key of a JWPlatform channel matching the collection id
     """
-    channel_resource = channel_for_collection_id(collection_id, client)
+    channel = resource_for_entity_id('channels', 'collection', collection_id, client)
 
     # If no channel found, raise error
-    if channel_resource is None:
+    if channel is None:
         raise ChannelNotFoundError()
 
     # Check the channel we found has a non-None key
-    if channel_resource.get('key') is None:
+    if channel.get('key') is None:
         raise ChannelNotFoundError()
 
-    return channel_resource['key']
+    return channel['key']
+
+
+def resource_for_entity_id(resource_type, entity_type, id, client=None):
+    """
+    Retrieve JWPlatform resource matching an SMS entity id stored in it's custom params
+
+    :param resource_type: the type of the JWPlatform resource
+    :param entity_type: the type of the SMS entity
+    :param id: the SMS entity id
+    :param client: (options) an authenticated JWPlatform client as returned by
+        :py:func:`.get_jwplatform_client`. If ``None``, call :py:func:`.get_jwplatform_client`.
+    :return: The JWPlatform resource matching the SMS entity id or None
+    """
+    client = client if client is not None else get_jwplatform_client()
+
+    # The name & value of the sms_*_id custom property we search for
+    entity_id_name = 'sms_{}_id'.format(entity_type)
+    entity_id_value = '{}:{:d}:'.format(entity_type, id)
+
+    # Search for resources
+    response = getattr(client, resource_type).list(**{
+        'search:custom.' + entity_id_name: entity_id_value,
+    })
+
+    # Find all resources with matching entity id
+    matching = [
+        resource for resource in response.get(resource_type, [])
+        if resource.get('custom', {}).get(entity_id_name) == entity_id_value
+    ]
+
+    if len(matching) == 0:
+        # no matches are found
+        return None
+
+    if len(matching) > 1:
+        # too many matches are found
+        LOG.warning('{} {} matches at least 2 {}'.format(entity_type, id, resource_type))
+
+    return matching[0]
 
 
 def upload_thumbnail_from_url(video_key, image_url, delay=None, client=None):
