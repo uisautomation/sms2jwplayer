@@ -35,16 +35,17 @@ def main(opts):
         globals()['process_' + sub_cmd](opts, fobj, items, metadata)
 
 
-def generic_channels_processor(fobj, collections, channels, create, update):
+def generic_job_creator(fobj, id_name, sms_entities, jw_resources, create, update):
     """
     Generic method that generates a set of create/update jobs for the purpose of synchronising
-    an aspect of a set of JWPlayer channels with a set of SMS collections. The aspect to be
-    synchronised is defined by the create/update callables. These jobs are written to file as
-    JSON document.
+    an aspect of a set of JWPlatform resources (channels or videos) with a set of
+    SMS entities (collections or items). The aspect to be synchronised is defined by the
+    create/update callables. These jobs are written to file as JSON document.
 
     :param fobj: file to write the create/update jobs to
-    :param collections: a list of SMS collections
-    :param channels: a list of JWPlayer channels
+    :param id_name: the name of the SMS entity id to use ('collection' or 'clip')
+    :param sms_entities: a list of SMS entities
+    :param jw_resources: a list of JWPlatform resources
     :param create: a callable that returns a list of create jobs
     :param update: a callable that returns a list of update jobs
 
@@ -55,69 +56,70 @@ def generic_channels_processor(fobj, collections, channels, create, update):
     # The list of create and update jobs which need to be performed.
     creates, updates = [], []
 
-    # A list of JWPlatform channel resources which could not be matched to an SMS collection object
+    # A list of JWPlatform resources which could not be matched to an SMS entity object
     # and hence should be deleted.
-    unmatched_channels = []
+    unmatched_jw_resources = []
 
-    # A list of (collection, channel resource) tuples representing that a given SMS collection is
-    # represented by a JWPlatform channel resource.
+    # A list of (sms_entity, jw_resource) tuples representing that a given
+    # SMS entity is represented by a JWPlatform resource.
     associations = []
 
-    # A dictionary which allows retrieval of collections by collection id.
-    collections_by_id = dict((collection.collection_id, collection) for collection in collections)
+    # A dictionary which allows retrieval of SMS entities by chosen id.
+    sms_entities_by_id = dict(
+        (getattr(sms_entity, id_name + '_id'), sms_entity) for sms_entity in sms_entities
+    )
 
-    # A set of collection ids which could not be matched to a corresponding JWPlatform channel.
-    # This starts with all collections but ids are removed as matching happens.
-    new_collection_ids = set(collections_by_id.keys())
+    # A set of SMS entity ids which could not be matched to a corresponding JWPlatform resource.
+    # This starts with all SMS entities but ids are removed as matching happens.
+    new_sms_entity_ids = set(sms_entities_by_id.keys())
 
-    # Match jwplayer videos to SMS collections
-    for channel in channels:
-        # Find an existing SMS collection id
-        collection_id_prop = get_key_path(channel, 'custom.sms_collection_id')
-        if collection_id_prop is None:
+    # Match JWPlatform resources to SMS entities
+    for jw_resource in jw_resources:
+        # Find an existing SMS entity id
+        sms_entity_id_prop = get_key_path(jw_resource, 'custom.sms_' + id_name + '_id')
+        if sms_entity_id_prop is None:
             n_skipped += 1
             continue
 
-        # Retrieve the matching SMS collection (or record the inability to do so)
+        # Retrieve the matching SMS entity (or record the inability to do so)
         try:
-            collection = collections_by_id[
-                int(parse_custom_prop('collection', collection_id_prop))
+            sms_entity = sms_entities_by_id[
+                int(parse_custom_prop(id_name, sms_entity_id_prop))
             ]
         except KeyError:
-            unmatched_channels.append(channel)
+            unmatched_jw_resources.append(jw_resource)
             continue
 
-        # Remove matched collection id from the new_collection_ids set
-        new_collection_ids -= {collection.collection_id}
+        # Remove matched entity id from the new_sms_entity_ids set
+        new_sms_entity_ids -= {getattr(sms_entity, id_name + '_id')}
 
-        # We now have a match between a channel and SMS collection. Record the match.
-        associations.append((collection, channel))
+        # We now have a match between a JWPlatform resource and SMS entity. Record the match.
+        associations.append((sms_entity, jw_resource))
 
-    # Generate updates for existing channels
-    for collection, channel in associations:
-        updates.extend(update(collection, channel))
+    # Generate updates for existing JWPlatform resources.
+    for sms_entity, jw_resource in associations:
+        updates.extend(update(sms_entity, jw_resource))
 
-    # Generate creates for new channels
-    for collection in (collections_by_id[collection_id] for collection_id in new_collection_ids):
-        creates.extend(create(collection))
+    # Generate creates for new JWPlatform resources.
+    for sms_entity in (sms_entities_by_id[sms_entity_id] for sms_entity_id in new_sms_entity_ids):
+        creates.extend(create(sms_entity))
 
-    LOG.info('Number of JWPlatform channels matched to SMS collections: %s',
-             len(associations))
-    LOG.info('Number of SMS collections with no existing channel: %s',
-             len(new_collection_ids))
-    LOG.info('Number of managed JWPlatform channels not matched to SMS collections: %s',
-             len(unmatched_channels))
-    LOG.info('Number of JWPlatform channels not managed by sms2jwplayer: %s', n_skipped)
-    LOG.info('Number of channel creations: %s', len(creates))
-    LOG.info('Number of channel updates: %s', len(updates))
+    LOG.info('Number of JWPlatform resources matched to SMS entities: %s', len(associations))
+    LOG.info('Number of SMS entities with no existing JWPlatform resource: %s',
+             len(new_sms_entity_ids))
+    LOG.info('Number of managed JWPlatform resources not matched to SMS entities: %s',
+             len(unmatched_jw_resources))
+    LOG.info('Number of JWPlatform resources not managed by sms2jwplayer: %s', n_skipped)
+    LOG.info('Number of creation jobs: %s', len(creates))
+    LOG.info('Number of update jobs: %s', len(updates))
 
     json.dump({'create': creates, 'update': updates}, fobj)
 
 
 def process_channels(_, fobj, collections, channels):
     """
-    Uses generic_channels_processor to generate a set of create/update jobs for the purpose of
-    synchronising the title, description, & custom parameters of a set of JWPlayer channels with
+    Uses generic_job_creator to generate a set of create/update jobs for the purpose of
+    synchronising the title, description, & custom parameters of a set of JWPlatform channels with
     a set of SMS collections.
 
     """
@@ -148,12 +150,12 @@ def process_channels(_, fobj, collections, channels):
             }]
         return []
 
-    generic_channels_processor(fobj, collections, channels, create, update)
+    generic_job_creator(fobj, 'collection', collections, channels, create, update)
 
 
 def process_videos_in_channels(_, fobj, collections, channels):
     """
-    Uses generic_channels_processor to generate a set of create/update jobs for the purpose of
+    Uses generic_job_creator to generate a set of create/update jobs for the purpose of
     synchronising the videos contains by a set of JWPlayer channels with media items contains by
     a set of SMS collections.
 
@@ -189,7 +191,7 @@ def process_videos_in_channels(_, fobj, collections, channels):
 
         return updates
 
-    generic_channels_processor(fobj, collections, channels, create, update)
+    generic_job_creator(fobj, 'collection', collections, channels, create, update)
 
 
 def make_videos_in_channels_jobs(collection, job_type, media_ids):
@@ -201,65 +203,37 @@ def make_videos_in_channels_jobs(collection, job_type, media_ids):
 
 
 def process_videos(opts, fobj, items, videos):
+    """
+    Uses generic_job_creator to generate a set of create/update jobs for the purpose of
+    synchronising the content, title, description, custom parameters, & thumbnail of a set of
+    JWPlatform videos with a set of SMS items.
+
+    """
 
     items = choose_media_format(items)
 
-    """
-    Process video metadata records with reference to a list of media items.
-    Write results to file as JSON document.
-
-    """
     # Load items keyed by stripped path
     strip_from = int(opts['--strip-leading'])
     LOG.info('Stripping leading %s component(s) from filename', strip_from)
 
-    # Statistics we record
-    n_skipped = 0
+    def create(item):
+        """Return a single job to create the JWPlatform video resource."""
+        video = make_resource_for_video(item)
+        video.update({
+            'download_url': url(opts, item),
+        })
+        return [{
+            'type': 'videos',
+            'resource': video,
+        }]
 
-    # The list of create and update jobs which need to be performed.
-    creates, updates = [], []
+    def update(item, video):
+        """Return a job to update the JWPlatform video resource, if any of the properties have
+        changed. Additionally returns jobs to upload a thumbnail (image_load) or check that a
+        thumbnail has been accepted (image_check) """
 
-    # A list of JWPlatform video resources which could not be matched to an SMS media object and
-    # hence should be deleted.
-    unmatched_videos = []
+        updates = []
 
-    # A list of (item, video resource) tuples representing that a given SMS media item is
-    # represented by a JWPlatform video resource. This may be a one-to-many mapping; a single SMS
-    # media item may have more than one JWPlatform video resource associated with it.
-    associations = []
-
-    # A dictionary which allows retrieval of media_items by clip id.
-    items_by_id = dict((item.clip_id, item) for item in items)
-
-    # A set of item media_ids which could not be matched to a corresponding JWPlatform video. This
-    # starts full of all items but items are removed as matching happens.
-    new_item_ids = set(items_by_id.keys())
-
-    # Match jwplayer videos to SMS items
-    for video in videos:
-        # Find an existing SMS clip id
-        item_id_prop = get_key_path(video, 'custom.sms_clip_id')
-        if item_id_prop is None:
-            n_skipped += 1
-            continue
-
-        item_id = int(parse_custom_prop('clip', item_id_prop))
-
-        # Retrieve the matching SMS media item (or record the inability to do so)
-        try:
-            item = items_by_id[item_id]
-        except KeyError:
-            unmatched_videos.append(video)
-            continue
-
-        # Remove matched item from new_items set
-        new_item_ids -= {item_id}
-
-        # We now have a match between a video and SMS media item. Record the match.
-        associations.append((item, video))
-
-    # Generate updates for existing videos
-    for item, video in associations:
         expected_video = make_resource_for_video(item)
 
         # Calculate delta from resource which exists to expected resource
@@ -268,11 +242,11 @@ def process_videos(opts, fobj, items, videos):
             # The delta is non-empty, so construct an update request. FSR, the *update* request for
             # JWPlatform requires the video be specified via 'video_key' but said key appears in
             # the video resource returned by /videos/list as 'key'.
-            update = {'video_key': video['key']}
-            update.update(delta)
+            update_job = {'video_key': video['key']}
+            update_job.update(delta)
             updates.append({
                 'type': 'videos',
-                'resource': update,
+                'resource': update_job,
             })
             if item.image_md5:
                 image_status = get_key_path(video, 'custom.sms_image_status')
@@ -296,31 +270,15 @@ def process_videos(opts, fobj, items, videos):
             # there is an SMS image and the image has been loaded but needs to be checked
             updates.append({'type': 'image_check', 'resource': {'video_key': video['key']}})
 
-    # Generate creates for new videos
-    for item in (items_by_id[item_id] for item_id in new_item_ids):
+        return updates
 
-        video = make_resource_for_video(item)
-        video.update({
-            'download_url': url(opts, item),
-        })
-        creates.append({
-            'type': 'videos',
-            'resource': video,
-        })
-
-    LOG.info('Number of JWPlatform videos matched to SMS media items: %s', len(associations))
-    LOG.info('Number of SMS media items with no existing video: %s', len(new_item_ids))
-    LOG.info('Number of managed JWPlatform videos not matched to SMS media items: %s',
-             len(unmatched_videos))
-    LOG.info('Number of JWPlatform videos not managed by sms2jwplayer: %s', n_skipped)
-    LOG.info('Number of video creations: %s', len(creates))
-    LOG.info('Number of video updates: %s', len(updates))
-
-    json.dump({'create': creates, 'update': updates}, fobj)
+    generic_job_creator(fobj, 'clip', items, videos, create, update)
 
 
 def choose_media_format(items):
-    """FIXME"""
+    """Accepts a list of media items. For each media_id the list can contain a VIDEO item or
+    an AUDIO item or both. The list is returned with only one item per media_id -
+    if both VIDEO & MEDIA items are present only the VIDEO item is returned. """
 
     items_by_media_id = {}
     for item in items:
