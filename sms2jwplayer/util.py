@@ -120,51 +120,41 @@ class VideoNotFoundError(RuntimeError):
     """
 
 
-def key_for_media_id(media_id, preferred_media_type='video', client=None):
+def key_for_clip_id(clip_id, client=None):
     """
-    :param media_id: the SMS media id of the required video
-    :type media_id: int
-    :param preferred_media_type: (optional) the preferred media type to return. One of ``'video'``
-        or ``'audio'``.
+    :param clip_id: the SMS clip id of the required video
+    :type clip_id: int
     :param client: (options) an authenticated JWPlatform client as returned by
         :py:func:`.get_jwplatform_client`. If ``None``, call :py:func:`.get_jwplatform_client`.
-    :raises: :py:class:`.VideoNotFoundError` if the media id does not correspond to a JWPlatform
+    :raises: :py:class:`.VideoNotFoundError` if the clip id does not correspond to a JWPlatform
         video.
 
     """
     client = client if client is not None else get_jwplatform_client()
 
-    # The value of the sms_media_id custom property we search for
-    media_id_value = 'media:{:d}:'.format(media_id)
+    # The value of the sms_clip_id custom property we search for
+    clip_id_value = 'clip:{:d}:'.format(clip_id)
 
     # Search for videos
     response = client.videos.list(**{
-        'search:custom.sms_media_id': media_id_value,
+        'search:custom.sms_clip_id': clip_id_value,
     })
 
-    # Loop through "videos" to find the preferred one based on mediatype
-    video_resource = None
-    for video in response.get('videos', []):
-        # Sanity check: skip videos with wrong media id since video search is
-        # not "is equal to", it is "contains".
-        if video.get('custom', {}).get('sms_media_id') != media_id_value:
-            continue
+    # Find all videos with matching clip id
+    matching = [
+        video for video in response.get('videos', [])
+        if video.get('custom', {}).get('sms_clip_id') == clip_id_value
+    ]
 
-        # use this video if it has the preferred mediatype or if we have nothing
-        # else
-        if (video.get('mediatype') == preferred_media_type
-                or video_resource is None):
-            video_resource = video
+    if len(matching) == 0:
+        # no matches are found
+        return None
 
-    # If no video found, raise error
-    if video_resource is None:
-        raise VideoNotFoundError()
+    if len(matching) > 1:
+        # too many matches are found
+        LOG.warning('Item {} matches more than one video'.format(clip_id))
 
-    # Check the video we found has a non-None key
-    if video_resource.get('key') is None:
-        raise VideoNotFoundError()
-
-    return video_resource['key']
+    return matching[0]
 
 
 def channel_for_collection_id(collection_id, client=None):
