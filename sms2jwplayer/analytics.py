@@ -37,7 +37,7 @@ import requests
 import tqdm
 
 from .util import get_jwplatform_client, JWPlatformClientError
-from jwplatform.errors import JWPlatformRateLimitExceededError
+from jwplatform.errors import JWPlatformRateLimitExceededError, JWPlatformNotFoundError
 
 LOG = logging.getLogger()
 
@@ -138,7 +138,12 @@ def write_output(fobj, client, rows_iterable):
     for row in rows_iterable:
         for _ in range(MAX_ATTEMPTS):
             try:
-                response = client.videos.show(video_key=row.media_id)
+                try:
+                    response = client.videos.show(video_key=row.media_id)
+                except JWPlatformNotFoundError:
+                    # the video could have been deleted
+                    break
+
                 if not response.get('status') == 'ok':
                     break
 

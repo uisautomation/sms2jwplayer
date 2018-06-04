@@ -118,7 +118,9 @@ def videos_insert(client, delay, resource):
         time.sleep(delay)
     except util.VideoNotFoundError:
         return 'video not found for media_id: {}'.format(resource['media_id'])
-    channel = util.channel_for_collection_id(resource['collection_id'], client)
+    channel = util.resource_for_entity_id(
+        'channels', 'collection', resource['collection_id'], client
+    )
     time.sleep(delay)
     if not channel:
         return 'channel not found for collection_id: {}'.format(resource['collection_id'])
@@ -151,8 +153,10 @@ def videos_delete(client, delay, resource):
         video_key = util.key_for_media_id(resource['media_id'])
         time.sleep(delay)
     except util.VideoNotFoundError:
-        return 'video not found for media_id: ' + resource['media_id']
-    channel = util.channel_for_collection_id(resource['collection_id'], client)
+        return 'video not found for media_id: {}'.format(resource['media_id'])
+    channel = util.resource_for_entity_id(
+        'channels', 'collection', resource['collection_id'], client
+    )
     time.sleep(delay)
     if not channel:
         return 'channel not found for collection_id: ' + resource['collection_id']
@@ -205,7 +209,7 @@ def create_calls(client, creates):
             params = resource_to_params(resource)
 
             # We wrap the entire create/update process in a function since we make use of two API
-            # calls (one is via key_for_media_id). Hence we want to re-try the entire thing if we
+            # calls (one is via key_for_clip_id). Hence we want to re-try the entire thing if we
             # hit the API rate limit.
             def do_create(delay):
                 # If video_key is set to anything other than None, an update of that video key will
@@ -213,27 +217,27 @@ def create_calls(client, creates):
                 video_key = None
 
                 # See if the resource already exists. If so, perform an update instead.
-                media_id_prop = params.get('custom.sms_media_id')
-                if media_id_prop is not None:
+                clip_id_prop = params.get('custom.sms_clip_id')
+                if clip_id_prop is not None:
                     try:
-                        media_id = int(util.parse_custom_prop('media', media_id_prop))
+                        clip_id = int(util.parse_custom_prop('clip', clip_id_prop))
                     except ValueError:
-                        LOG.warning('Skipping video with bad media id prop: %s', media_id_prop)
+                        LOG.warning('Skipping video with bad clip id prop: %s', clip_id_prop)
                     else:
-                        # Attempt to find a matching video for this media id.
+                        # Attempt to find a matching video for this clip id.
                         # If None found, that's OK.
                         try:
-                            video_key = util.key_for_media_id(media_id)
+                            video_key = util.key_for_clip_id(clip_id)
                         except util.VideoNotFoundError:
                             pass
                         finally:
                             time.sleep(delay)
 
                 if video_key is not None:
-                    LOG.warning('Updating video %(video_key)s instead of creating new one',
-                                {'video_key': video_key})
-                    return client.videos.update(
-                        http_method='POST', video_key=video_key, **params)
+                    LOG.warning(
+                        'Video %(video_key)s already exists - not creating',
+                        {'video_key': video_key}
+                    )
                 else:
                     return client.videos.create(http_method='POST', **params)
 
@@ -243,8 +247,8 @@ def create_calls(client, creates):
             params = resource_to_params(resource)
 
             # We wrap the entire create/update process in a function since we make use of two API
-            # calls (one is via key_for_media_id). Hence we want to re-try the entire thing if we
-            # hit the API rate limit.
+            # calls (one is via key_for_collection_id). Hence we want to re-try the entire thing
+            # if we hit the API rate limit.
             def do_create(delay):
                 # If channel_key is set to anything other than None, an update of that channel key
                 # will be done instead.
