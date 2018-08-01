@@ -477,14 +477,13 @@ def image_url(opts, item):
     return urllib.parse.urljoin(opts['--base-image-url'], str(item.image_id))
 
 
-def sanitise(s, max_length=4096):
+def sanitise(s):
     """
-    Strip odd characters from a string and sanitise the length to avoid JWPlatform complaining.
+    Strip odd characters from a string if JWPlatform complains.
 
     """
     # Map control characters to empty string
-    s = s.translate(dict.fromkeys(range(32)))
-
-    # Truncate
-    s = s[:max_length]
+    ctrl_char_map = dict.fromkeys(range(32))
+    del ctrl_char_map[10]  # allow newlines
+    s = s.translate(ctrl_char_map)
     return s
