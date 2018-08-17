@@ -176,7 +176,8 @@ def process_videos_in_channels(_, fobj, collections, channels):
             media_ids_prop = get_key_path(channel, 'custom.sms_' + prop_name)
             if not media_ids_prop:
                 return []
-            return parse_custom_prop(prop_name, media_ids_prop).split(',')
+            media_ids_list = parse_custom_prop(prop_name, media_ids_prop).strip()
+            return media_ids_list.split(',') if media_ids_list != '' else []
 
         media_ids = set(get_media_ids('media_ids'))
         media_ids |= set(get_media_ids('failed_media_ids'))
