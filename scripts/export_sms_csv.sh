@@ -55,7 +55,7 @@ COPY (
         m.language AS language,
         m.keywords AS keywords,
         m.visibility AS visibility,
-        m.acl AS acl,
+        coalesce(m.acl, sms_collection.acl) AS acl,
         m.screencast AS screencast,
         coalesce(m.image_id, sms_collection.image_id) AS image_id,
         md5(i.data) AS image_md5,
