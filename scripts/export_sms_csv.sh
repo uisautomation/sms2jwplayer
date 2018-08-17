@@ -64,16 +64,13 @@ COPY (
         m.last_updated AS last_updated_at,
         m.updated_by AS updated_by,
         m.downloadable AS downloadable,
-        m.withdrawn AS withdrawn
+        m.withdrawn AS withdrawn,
+        sms_clip.quality AS quality
     FROM
         sms_media m
         JOIN sms_clip ON sms_clip.media_id = m.id
         JOIN sms_collection ON sms_collection.id = m.collection_id
         LEFT OUTER JOIN sms_image i on i.id = coalesce(m.image_id, sms_collection.image_id)
-    WHERE
-        ( sms_clip.format = 'archive-h264' OR sms_clip.format = 'audio' )
-        AND sms_clip.quality = 'high'
-        AND sms_clip.filename IS NOT NULL
     ORDER BY
         m.id
 ) TO STDOUT DELIMITER ',' CSV HEADER;

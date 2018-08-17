@@ -292,19 +292,44 @@ def choose_media_format(items):
 
     pruned_items = []
 
+    # Desired format in descending order
+    desired_formats = [
+        (smscsv.MediaFormat.VIDEO, smscsv.MediaQuality.HIGH),
+        (smscsv.MediaFormat.MPEG4, smscsv.MediaQuality.HIGH),
+        (smscsv.MediaFormat.MPEG4, smscsv.MediaQuality.HIGH_RES),
+        (smscsv.MediaFormat.FLV, smscsv.MediaQuality.HIGH),
+        (smscsv.MediaFormat.MPEG4, smscsv.MediaQuality.LOW_RES),
+        (smscsv.MediaFormat.AUDIO, smscsv.MediaQuality.HIGH),
+        (smscsv.MediaFormat.AAC, smscsv.MediaQuality.HIGH),
+        (smscsv.MediaFormat.MP3, smscsv.MediaQuality.HIGH),
+        (smscsv.MediaFormat.AAC, smscsv.MediaQuality.MEDIUM),
+        (smscsv.MediaFormat.MP3, smscsv.MediaQuality.MEDIUM),
+        (smscsv.MediaFormat.AAC, smscsv.MediaQuality.LOW),
+        (smscsv.MediaFormat.MP3, smscsv.MediaQuality.LOW),
+    ]
+
     for media_items in items_by_media_id.values():
+        if set(item.filename for item in media_items) == {''}:
+            LOG.warning(
+                'Skipping item media_id=%s since it has no files at all', media_items[0].media_id)
+            continue
 
-        video_item, audio_item = None, None
+        format_quality_pairs = {(item.format, item.quality): item for item in media_items}
 
-        for item in media_items:
-            if item.format is smscsv.MediaFormat.VIDEO:
-                video_item = item
-            elif item.format is smscsv.MediaFormat.AUDIO:
-                audio_item = item
-            else:
-                LOG.warning('Unknown format: %s', item.format)
+        best_item = None
+        for f in desired_formats:
+            item = format_quality_pairs.get(f)
+            if item is not None and item.filename != '':
+                best_item = item
+                break
 
-        pruned_items.append(video_item if video_item is not None else audio_item)
+        if best_item is not None:
+            pruned_items.append(best_item)
+        else:
+            LOG.warning('Could not find format for item: media_id=%s', media_items[0].media_id)
+            LOG.warning('Formats and filenames:')
+            for item in media_items:
+                LOG.warning('    %s', repr([(item.format, item.quality, item.filename)]))
 
     return pruned_items
 

@@ -67,6 +67,25 @@ CollectionItem._ITEM_TYPES = [
 class MediaFormat(enum.Enum):
     VIDEO = 'archive-h264'
     AUDIO = 'audio'
+    AAC = 'aac'
+    AIFF = 'aiff'
+    FLV = 'flv'
+    IPOD = 'ipod'
+    MOV = 'mov'
+    MP3 = 'mp3'
+    MPEG4 = 'mpeg4'
+    RA = 'ra'
+    RM = 'rm'
+    WEBM = 'webm'
+    WMV = 'wmv'
+
+
+class MediaQuality(enum.Enum):
+    LOW_RES = '360p'
+    HIGH_RES = '720p'
+    HIGH = 'high'
+    LOW = 'low'
+    MEDIUM = 'medium'
 
 
 MediaItem = collections.namedtuple(
@@ -75,7 +94,7 @@ MediaItem = collections.namedtuple(
                   'creator publisher copyright language keywords visibility '
                   'acl screencast image_id image_md5 '
                   'featured branding last_updated_at updated_by '
-                  'downloadable withdrawn')
+                  'downloadable withdrawn quality')
 )
 MediaItem.__doc__ = """
 Representation of a single media item within the SMS.
@@ -159,6 +178,8 @@ same but prefixed by "`sms_`".
 * ``downloadable`` - Whether or not the media item can be downloaded from it's page.
 
 * ``withdrawn`` - No definition available.
+
+* ``quality`` - The quality of the encoded video. E.g. "high", "720p".
 """
 
 # Callables which massage strings into the right types for each column
@@ -168,7 +189,7 @@ MediaItem._ITEM_TYPES = [
     str, str, str, str, str, str,
     lambda acl: acl.split(','), lambda b: b == 't', lambda i: int(i) if i != '' else None, str,
     lambda b: b == 't', lambda b: b == 't', dateutil.parser.parse, str,
-    lambda b: b == 't', str
+    lambda b: b == 't', str, MediaQuality
 ]
 
 

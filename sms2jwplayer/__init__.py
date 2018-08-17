@@ -31,7 +31,7 @@ Options:
     --base=URL          Base URL to use for links in MRSS feed.
     --base-image-url=URL          Base URL to use for thumbnail images in MRSS feed.
     --strip-leading=N   Number of leading components of filename path to strip
-                        from filenames in the CSV. [default: 1]
+                        from filenames in the CSV. [default: 0]
 
     --base-name=NAME    Base of filename used to save results to.
                         [default: videos_]
