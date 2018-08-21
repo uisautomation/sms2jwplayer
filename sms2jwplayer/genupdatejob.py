@@ -304,6 +304,7 @@ def choose_media_format(items):
         (smscsv.MediaFormat.MPEG4, smscsv.MediaQuality.LOW_RES),
         (smscsv.MediaFormat.IPOD, smscsv.MediaQuality.LOW),
         (smscsv.MediaFormat.FLV, smscsv.MediaQuality.LOW),
+        (smscsv.MediaFormat.WMV, smscsv.MediaQuality.HIGH),
         (smscsv.MediaFormat.AUDIO, smscsv.MediaQuality.HIGH),
         (smscsv.MediaFormat.AAC, smscsv.MediaQuality.HIGH),
         (smscsv.MediaFormat.MP3, smscsv.MediaQuality.HIGH),
