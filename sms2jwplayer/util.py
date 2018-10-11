@@ -120,28 +120,6 @@ class VideoNotFoundError(RuntimeError):
     """
 
 
-def key_for_clip_id(clip_id, client=None):
-    """
-    :param clip_id: clip id of the SMS item to match the JWPlatform video
-    :param client: (options) an authenticated JWPlatform client as returned by
-        :py:func:`.get_jwplatform_client`. If ``None``, call :py:func:`.get_jwplatform_client`.
-    :raises: :py:class:`.VideoNotFoundError`
-        if the clip id does not correspond to a JWPlatform video.
-    :return: The key of a JWPlatform video matching the clip id
-    """
-    video = resource_for_entity_id('videos', 'clip', clip_id, client)
-
-    # If no channel found, raise error
-    if video is None:
-        raise VideoNotFoundError()
-
-    # Check the channel we found has a non-None key
-    if video.get('key') is None:
-        raise VideoNotFoundError()
-
-    return video['key']
-
-
 def key_for_media_id(media_id, client=None):
     """
     :param media_id: media id of the SMS item to match the JWPlatform video
