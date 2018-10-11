@@ -209,7 +209,7 @@ def create_calls(client, creates):
             params = resource_to_params(resource)
 
             # We wrap the entire create/update process in a function since we make use of two API
-            # calls (one is via key_for_clip_id). Hence we want to re-try the entire thing if we
+            # calls (one is via key_for_media_id). Hence we want to re-try the entire thing if we
             # hit the API rate limit.
             def do_create(delay):
                 # If video_key is set to anything other than None, an update of that video key will
@@ -217,17 +217,17 @@ def create_calls(client, creates):
                 video_key = None
 
                 # See if the resource already exists. If so, perform an update instead.
-                clip_id_prop = params.get('custom.sms_clip_id')
-                if clip_id_prop is not None:
+                media_id_prop = params.get('custom.sms_media_id')
+                if media_id_prop is not None:
                     try:
-                        clip_id = int(util.parse_custom_prop('clip', clip_id_prop))
+                        media_id = int(util.parse_custom_prop('media', media_id_prop))
                     except ValueError:
-                        LOG.warning('Skipping video with bad clip id prop: %s', clip_id_prop)
+                        LOG.warning('Skipping video with bad media id prop: %s', media_id_prop)
                     else:
-                        # Attempt to find a matching video for this clip id.
+                        # Attempt to find a matching video for this media id.
                         # If None found, that's OK.
                         try:
-                            video_key = util.key_for_clip_id(clip_id)
+                            video_key = util.key_for_media_id(media_id)
                         except util.VideoNotFoundError:
                             pass
                         finally:

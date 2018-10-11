@@ -276,7 +276,7 @@ def process_videos(opts, fobj, items, videos):
 
         return updates
 
-    generic_job_creator(fobj, 'clip', items, videos, create, update)
+    generic_job_creator(fobj, 'media', items, videos, create, update)
 
 
 def choose_media_format(items):
