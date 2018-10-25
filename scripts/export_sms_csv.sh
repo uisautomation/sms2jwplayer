@@ -71,6 +71,7 @@ COPY (
         JOIN sms_clip ON sms_clip.media_id = m.id
         JOIN sms_collection ON sms_collection.id = m.collection_id
         LEFT OUTER JOIN sms_image i on i.id = coalesce(m.image_id, sms_collection.image_id)
+    WHERE NOT EXISTS (SELECT * FROM corrupted_clips WHERE corrupted_clips.clip_id = sms_clip.id)
     ORDER BY
         m.id
 ) TO STDOUT DELIMITER ',' CSV HEADER;
