@@ -447,6 +447,10 @@ def make_resource_for_channel(collection):
                 collection.last_updated_at.isoformat()
             ),
             'sms_updated_by': 'updated_by:{}:'.format(collection.updated_by),
+            # This field holds the media ids of what should be in the collection irrespective of
+            # how we've synchronised it so far.
+            'sms_collection_media_ids': 'collection_media_ids:{}:'.format(
+                ','.join(str(mid) for mid in collection.media_ids)),
         },
     }
 
