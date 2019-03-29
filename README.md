@@ -1,5 +1,7 @@
 # SMS to jwplayer export tooling
 
+> Moved to https://gitlab.developers.cam.ac.uk/uis/devops/sms/sms2jwplayer
+
 [![Build
 Status](https://travis-ci.org/uisautomation/sms2jwplayer.svg?branch=master)](https://travis-ci.org/uisautomation/sms2jwplayer)
 
